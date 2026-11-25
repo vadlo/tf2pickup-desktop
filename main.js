@@ -338,7 +338,7 @@ const ZOOM_MAX = 1
 // on long pages, so the height-driven shrink stops at a readable scale. The
 // width-driven scale may go lower, because that is required to fit narrow
 // windows without horizontal scrolling.
-const ZOOM_HEIGHT_FLOOR = 0.7
+const ZOOM_HEIGHT_FLOOR = 0.75
 
 let autoZoomTimer = null
 let autoZoomSeq = 0
@@ -501,6 +501,12 @@ function createMainWindow() {
     title: 'TF2Pickup',
     icon: iconFile('app.ico'),
     backgroundColor: settings.faceitTheme ? '#0a0b0e' : '#1b1b1b',
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: settings.faceitTheme ? '#0a0b0e' : '#1b1b1b',
+      symbolColor: settings.faceitTheme ? '#e6e8ee' : '#ffffff',
+      height: 34,
+    },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
