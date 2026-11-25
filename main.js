@@ -342,6 +342,7 @@ const ZOOM_HEIGHT_FLOOR = 0.8
 
 let autoZoomTimer = null
 let autoZoomSeq = 0
+let transitionDisableKey = null
 
 function readPageMetrics(webContents) {
   const read = webContents
@@ -362,6 +363,41 @@ function readPageMetrics(webContents) {
   return Promise.race([read, timeout])
 }
 
+function disableTransitionsTemporarily(webContents) {
+  if (!webContents || webContents.isDestroyed()) return
+  if (transitionDisableKey) return
+  try {
+    transitionDisableKey = webContents.insertCSS(
+      '* { transition: none !important; animation: none !important; }',
+    )
+    setTimeout(() => {
+      if (transitionDisableKey) {
+        try {
+          webContents.removeInsertedCSS(transitionDisableKey)
+        } catch {
+          // Ignore.
+        }
+        transitionDisableKey = null
+      }
+    }, 350)
+  } catch {
+    // Ignore.
+  }
+}
+
+function applyWidthZoom(webContents) {
+  if (!webContents || webContents.isDestroyed()) return
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const [width] = mainWindow.getContentSize()
+  if (!width) return
+  const zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, width / ZOOM_REFERENCE_WIDTH))
+  try {
+    if (Math.abs(webContents.getZoomFactor() - zoom) > 0.001) webContents.setZoomFactor(zoom)
+  } catch (error) {
+    // Ignore.
+  }
+}
+
 async function applyAutoZoom(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   if (!mainWindow || mainWindow.isDestroyed()) return
@@ -375,18 +411,32 @@ async function applyAutoZoom(webContents) {
 
   try {
     if (Math.abs(webContents.getZoomFactor() - zoom) > 0.001) webContents.setZoomFactor(zoom)
-    // The responsive layout changes together with the zoom, so the first
-    // estimate may need a couple of small corrections.
-    for (let pass = 0; pass < 3; pass += 1) {
-      const metrics = await readPageMetrics(webContents)
-      if (seq !== autoZoomSeq) return
-      if (!metrics || !metrics.innerHeight) break
+    // One correction pass: if the page is still taller than the viewport,
+    // shrink (but no lower than the readable floor). Re-measure once more
+    // afterwards because the responsive layout follows the new zoom.
+    const metrics = await readPageMetrics(webContents)
+    if (seq !== autoZoomSeq) return
+    if (metrics && metrics.innerHeight) {
       const ratio = metrics.innerHeight / Math.max(1, metrics.scrollHeight)
-      if (ratio >= 0.995) break
-      const next = Math.max(heightFloor, zoom * ratio)
-      if (next >= zoom - 0.002) break
-      zoom = next
-      webContents.setZoomFactor(zoom)
+      if (ratio < 0.995) {
+        const next = Math.max(heightFloor, zoom * ratio)
+        if (next < zoom - 0.002) {
+          zoom = next
+          webContents.setZoomFactor(zoom)
+          const second = await readPageMetrics(webContents)
+          if (seq !== autoZoomSeq) return
+          if (second && second.innerHeight) {
+            const ratio2 = second.innerHeight / Math.max(1, second.scrollHeight)
+            if (ratio2 < 0.995) {
+              const next2 = Math.max(heightFloor, zoom * ratio2)
+              if (next2 < zoom - 0.002) {
+                zoom = next2
+                webContents.setZoomFactor(zoom)
+              }
+            }
+          }
+        }
+      }
     }
   } catch (error) {
     // Ignore: the page can be replaced while the zoom is applied.
@@ -398,7 +448,7 @@ function scheduleAutoZoom(webContents) {
   autoZoomTimer = setTimeout(() => {
     autoZoomTimer = null
     void applyAutoZoom(webContents)
-  }, 150)
+  }, 50)
 }
 
 function attachZoom(webContents) {
@@ -449,6 +499,9 @@ function createMainWindow() {
   })
 
   mainWindow.setMenu(null)
+  // Apply the width-based zoom before the first paint so the site is never
+  // shown unscaled, even for a moment.
+  applyWidthZoom(mainWindow.webContents)
   mainWindow.loadURL(settings.siteUrl)
   attachZoom(mainWindow.webContents)
   mainWindow.webContents.on('dom-ready', () => {
@@ -458,15 +511,20 @@ function createMainWindow() {
   mainWindow.webContents.on('did-finish-load', () => {
     applyAutoZoom(mainWindow?.webContents)
   })
-  mainWindow.on('resize', () => scheduleAutoZoom(mainWindow?.webContents))
-  mainWindow.on('maximize', () => scheduleAutoZoom(mainWindow?.webContents))
-  mainWindow.on('unmaximize', () => scheduleAutoZoom(mainWindow?.webContents))
-  mainWindow.on('enter-full-screen', () => scheduleAutoZoom(mainWindow?.webContents))
-  mainWindow.on('leave-full-screen', () => scheduleAutoZoom(mainWindow?.webContents))
-  mainWindow.on('restore', () => scheduleAutoZoom(mainWindow?.webContents))
-  mainWindow.webContents.on('did-navigate-in-page', () =>
-    scheduleAutoZoom(mainWindow?.webContents),
-  )
+  const refit = () => {
+    disableTransitionsTemporarily(mainWindow?.webContents)
+    // Apply the width zoom synchronously first to avoid a flash of the
+    // un-scaled page, then refine for height asynchronously.
+    applyWidthZoom(mainWindow?.webContents)
+    scheduleAutoZoom(mainWindow?.webContents)
+  }
+  mainWindow.on('resize', refit)
+  mainWindow.on('maximize', refit)
+  mainWindow.on('unmaximize', refit)
+  mainWindow.on('enter-full-screen', refit)
+  mainWindow.on('leave-full-screen', refit)
+  mainWindow.on('restore', refit)
+  mainWindow.webContents.on('did-navigate-in-page', () => scheduleAutoZoom(mainWindow?.webContents))
   applyAutoZoom(mainWindow.webContents)
 
   mainWindow.on('close', event => {
