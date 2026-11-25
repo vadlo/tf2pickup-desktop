@@ -343,6 +343,7 @@ const ZOOM_HEIGHT_FLOOR = 0.7
 let autoZoomTimer = null
 let autoZoomSeq = 0
 let transitionDisableKey = null
+let pageHideKey = null
 
 function readPageMetrics(webContents) {
   const read = webContents
@@ -383,6 +384,37 @@ function disableTransitionsTemporarily(webContents) {
   } catch {
     // Ignore.
   }
+}
+
+function hidePage(webContents) {
+  if (!webContents || webContents.isDestroyed()) return
+  if (pageHideKey) return
+  try {
+    pageHideKey = webContents.insertCSS('html { visibility: hidden !important; }')
+    setTimeout(() => {
+      if (pageHideKey) {
+        try {
+          webContents.removeInsertedCSS(pageHideKey)
+        } catch {
+          // Ignore.
+        }
+        pageHideKey = null
+      }
+    }, 1200)
+  } catch {
+    // Ignore.
+  }
+}
+
+function showPage(webContents) {
+  if (!webContents || webContents.isDestroyed()) return
+  if (!pageHideKey) return
+  try {
+    webContents.removeInsertedCSS(pageHideKey)
+  } catch {
+    // Ignore.
+  }
+  pageHideKey = null
 }
 
 function applyWidthZoom(webContents) {
@@ -505,14 +537,17 @@ function createMainWindow() {
   mainWindow.loadURL(settings.siteUrl)
   attachZoom(mainWindow.webContents)
   mainWindow.webContents.on('dom-ready', () => {
+    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     applySiteTheme(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
     applyAutoZoom(mainWindow?.webContents)
+    showPage(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-finish-load', () => {
     disableTransitionsTemporarily(mainWindow?.webContents)
     refit()
+    showPage(mainWindow?.webContents)
   })
   const refit = () => {
     disableTransitionsTemporarily(mainWindow?.webContents)
@@ -528,20 +563,25 @@ function createMainWindow() {
   mainWindow.on('leave-full-screen', refit)
   mainWindow.on('restore', refit)
   mainWindow.webContents.on('will-navigate', () => {
+    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-start-navigation', () => {
+    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-start-loading', () => {
+    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-navigate', () => {
+    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     refit()
+    showPage(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-navigate-in-page', () => {
     disableTransitionsTemporarily(mainWindow?.webContents)
