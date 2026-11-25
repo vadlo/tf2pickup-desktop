@@ -6,6 +6,37 @@ contextBridge.exposeInMainWorld('desktopApi', {
   getVersion: () => ipcRenderer.invoke('app:version'),
 })
 
+if (location.protocol !== 'file:') {
+  try {
+    const hideStyle = document.createElement('style')
+    hideStyle.id = 'tf2pickup-hide'
+    hideStyle.textContent = 'html { visibility: hidden !important; }'
+    const hideTarget = document.head || document.documentElement
+    if (hideTarget) hideTarget.appendChild(hideStyle)
+    else
+      document.addEventListener(
+        'DOMContentLoaded',
+        () => {
+          const t = document.head || document.documentElement
+          if (t && !document.getElementById('tf2pickup-hide')) t.appendChild(hideStyle)
+        },
+        { once: true },
+      )
+    // Safety net: never leave the page hidden forever.
+    setTimeout(() => {
+      const el = document.getElementById('tf2pickup-hide')
+      if (el) el.remove()
+    }, 1500)
+  } catch {
+    // Ignore: hiding is best-effort polish.
+  }
+
+  ipcRenderer.on('page:show', () => {
+    const el = document.getElementById('tf2pickup-hide')
+    if (el) el.remove()
+  })
+}
+
 const REQUEUE_PENDING_KEY = 'tf2pickup-desktop:requeue-pending'
 const MY_GAME_KEY = 'tf2pickup-desktop:my-game'
 const QUEUE_URL_CACHE_PREFIX = 'tf2pickup-desktop:queue-url:'

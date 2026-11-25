@@ -408,13 +408,25 @@ function hidePage(webContents) {
 
 function showPage(webContents) {
   if (!webContents || webContents.isDestroyed()) return
-  if (!pageHideKey) return
+  if (!pageHideKey) {
+    try {
+      webContents.send('page:show')
+    } catch {
+      // Ignore.
+    }
+    return
+  }
   try {
     webContents.removeInsertedCSS(pageHideKey)
   } catch {
     // Ignore.
   }
   pageHideKey = null
+  try {
+    webContents.send('page:show')
+  } catch {
+    // Ignore.
+  }
 }
 
 function applyWidthZoom(webContents) {
@@ -472,6 +484,13 @@ async function applyAutoZoom(webContents) {
     }
   } catch (error) {
     // Ignore: the page can be replaced while the zoom is applied.
+  }
+  if (webContents && !webContents.isDestroyed()) {
+    try {
+      webContents.send('page:show')
+    } catch {
+      // Ignore.
+    }
   }
 }
 
