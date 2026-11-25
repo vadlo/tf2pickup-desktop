@@ -338,7 +338,7 @@ const ZOOM_MAX = 1
 // on long pages, so the height-driven shrink stops at a readable scale. The
 // width-driven scale may go lower, because that is required to fit narrow
 // windows without horizontal scrolling.
-const ZOOM_HEIGHT_FLOOR = 0.8
+const ZOOM_HEIGHT_FLOOR = ZOOM_MIN
 
 let autoZoomTimer = null
 let autoZoomSeq = 0
@@ -505,11 +505,14 @@ function createMainWindow() {
   mainWindow.loadURL(settings.siteUrl)
   attachZoom(mainWindow.webContents)
   mainWindow.webContents.on('dom-ready', () => {
+    disableTransitionsTemporarily(mainWindow?.webContents)
     applySiteTheme(mainWindow?.webContents)
+    applyWidthZoom(mainWindow?.webContents)
     applyAutoZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-finish-load', () => {
-    applyAutoZoom(mainWindow?.webContents)
+    disableTransitionsTemporarily(mainWindow?.webContents)
+    refit()
   })
   const refit = () => {
     disableTransitionsTemporarily(mainWindow?.webContents)
@@ -524,7 +527,18 @@ function createMainWindow() {
   mainWindow.on('enter-full-screen', refit)
   mainWindow.on('leave-full-screen', refit)
   mainWindow.on('restore', refit)
-  mainWindow.webContents.on('did-navigate-in-page', () => scheduleAutoZoom(mainWindow?.webContents))
+  mainWindow.webContents.on('will-navigate', () => {
+    disableTransitionsTemporarily(mainWindow?.webContents)
+    applyWidthZoom(mainWindow?.webContents)
+  })
+  mainWindow.webContents.on('did-navigate', () => {
+    disableTransitionsTemporarily(mainWindow?.webContents)
+    refit()
+  })
+  mainWindow.webContents.on('did-navigate-in-page', () => {
+    disableTransitionsTemporarily(mainWindow?.webContents)
+    refit()
+  })
   applyAutoZoom(mainWindow.webContents)
 
   mainWindow.on('close', event => {
