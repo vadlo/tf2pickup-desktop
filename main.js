@@ -343,6 +343,9 @@ const ZOOM_HEIGHT_FLOOR = 0.7
 let autoZoomTimer = null
 let autoZoomSeq = 0
 let transitionDisableKey = null
+// Once a page needs shrinking, keep the zoom at most that small for the rest
+// of the session so later pages never flash a larger (un-scaled) layout first.
+let sessionZoomFloor = 1
 
 function readPageMetrics(webContents) {
   const read = webContents
@@ -395,10 +398,9 @@ function disableTransitionsTemporarily(webContents) {
 function applyWidthZoom(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   if (!mainWindow || mainWindow.isDestroyed()) return
-  const [rawWidth] = mainWindow.getContentSize()
-  const width = rawWidth || 1366
+  const [width] = mainWindow.getContentSize()
   if (!width) return
-  const zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, width / ZOOM_REFERENCE_WIDTH))
+  const zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, width / ZOOM_REFERENCE_WIDTH), sessionZoomFloor)
   try {
     if (Math.abs(webContents.getZoomFactor() - zoom) > 0.001) webContents.setZoomFactor(zoom)
   } catch (error) {
@@ -409,12 +411,11 @@ function applyWidthZoom(webContents) {
 async function applyAutoZoom(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   if (!mainWindow || mainWindow.isDestroyed()) return
-  const [rawWidth] = mainWindow.getContentSize()
-  const width = rawWidth || 1366
+  const [width] = mainWindow.getContentSize()
   if (!width) return
 
   const seq = ++autoZoomSeq
-  const widthZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, width / ZOOM_REFERENCE_WIDTH))
+  const widthZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, width / ZOOM_REFERENCE_WIDTH), sessionZoomFloor)
   const heightFloor = Math.min(widthZoom, ZOOM_HEIGHT_FLOOR)
   let zoom = widthZoom
 
@@ -450,13 +451,7 @@ async function applyAutoZoom(webContents) {
   } catch (error) {
     // Ignore: the page can be replaced while the zoom is applied.
   }
-  if (webContents && !webContents.isDestroyed()) {
-    try {
-      webContents.send('page:show')
-    } catch {
-      // Ignore.
-    }
-  }
+  if (zoom < sessionZoomFloor) sessionZoomFloor = zoom
 }
 
 function scheduleAutoZoom(webContents) {
@@ -521,13 +516,11 @@ function createMainWindow() {
   mainWindow.loadURL(settings.siteUrl)
   attachZoom(mainWindow.webContents)
   mainWindow.webContents.on('dom-ready', () => {
-    disableTransitionsTemporarily(mainWindow?.webContents)
     applySiteTheme(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
     applyAutoZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-finish-load', () => {
-    disableTransitionsTemporarily(mainWindow?.webContents)
     refit()
   })
   const refit = () => {
@@ -544,23 +537,18 @@ function createMainWindow() {
   mainWindow.on('leave-full-screen', refit)
   mainWindow.on('restore', refit)
   mainWindow.webContents.on('will-navigate', () => {
-    disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-start-navigation', () => {
-    disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-start-loading', () => {
-    disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-navigate', () => {
-    disableTransitionsTemporarily(mainWindow?.webContents)
     refit()
   })
   mainWindow.webContents.on('did-navigate-in-page', () => {
-    disableTransitionsTemporarily(mainWindow?.webContents)
     refit()
   })
   applyAutoZoom(mainWindow.webContents)

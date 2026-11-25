@@ -6,22 +6,6 @@ contextBridge.exposeInMainWorld('desktopApi', {
   getVersion: () => ipcRenderer.invoke('app:version'),
 })
 
-if (location.protocol !== 'file:') {
-  try {
-    const root = document.documentElement
-    if (root) root.style.visibility = 'hidden'
-    // Remove the hide once main applies the zoom, or after a short fallback
-    // so the page can never stay hidden forever.
-    const removeHide = () => {
-      const r = document.documentElement
-      if (r) r.style.visibility = ''
-    }
-    ipcRenderer.on('page:show', removeHide)
-    setTimeout(removeHide, 800)
-  } catch {
-    // Ignore: hiding is best-effort polish.
-  }
-}
 const REQUEUE_PENDING_KEY = 'tf2pickup-desktop:requeue-pending'
 const MY_GAME_KEY = 'tf2pickup-desktop:my-game'
 const QUEUE_URL_CACHE_PREFIX = 'tf2pickup-desktop:queue-url:'
