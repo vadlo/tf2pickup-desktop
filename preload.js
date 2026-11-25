@@ -8,28 +8,16 @@ contextBridge.exposeInMainWorld('desktopApi', {
 
 if (location.protocol !== 'file:') {
   try {
-    const hideStyle = document.createElement('style')
-    hideStyle.id = 'tf2pickup-hide'
-    hideStyle.textContent = 'html { visibility: hidden !important; }'
-    const hideTarget = document.head || document.documentElement
-    if (hideTarget) hideTarget.appendChild(hideStyle)
-    else
-      document.addEventListener(
-        'DOMContentLoaded',
-        () => {
-          const t = document.head || document.documentElement
-          if (t && !document.getElementById('tf2pickup-hide')) t.appendChild(hideStyle)
-        },
-        { once: true },
-      )
+    const root = document.documentElement
+    if (root) root.style.visibility = 'hidden'
     // Remove the hide once main applies the zoom, or after a short fallback
     // so the page can never stay hidden forever.
     const removeHide = () => {
-      const el = document.getElementById('tf2pickup-hide')
-      if (el) el.remove()
+      const r = document.documentElement
+      if (r) r.style.visibility = ''
     }
     ipcRenderer.on('page:show', removeHide)
-    setTimeout(removeHide, 400)
+    setTimeout(removeHide, 800)
   } catch {
     // Ignore: hiding is best-effort polish.
   }
