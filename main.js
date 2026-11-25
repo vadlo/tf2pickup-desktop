@@ -343,7 +343,6 @@ const ZOOM_HEIGHT_FLOOR = 0.7
 let autoZoomTimer = null
 let autoZoomSeq = 0
 let transitionDisableKey = null
-let pageHideKey = null
 
 function readPageMetrics(webContents) {
   const read = webContents
@@ -368,62 +367,26 @@ function disableTransitionsTemporarily(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   if (transitionDisableKey) return
   try {
-    transitionDisableKey = webContents.insertCSS(
+    const keyPromise = webContents.insertCSS(
       '* { transition: none !important; animation: none !important; }',
     )
-    setTimeout(() => {
-      if (transitionDisableKey) {
-        try {
-          webContents.removeInsertedCSS(transitionDisableKey)
-        } catch {
-          // Ignore.
-        }
+    transitionDisableKey = keyPromise
+    keyPromise
+      .then(key => {
+        setTimeout(() => {
+          if (transitionDisableKey === keyPromise) {
+            try {
+              webContents.removeInsertedCSS(key).catch(() => {})
+            } catch {
+              // Ignore.
+            }
+            transitionDisableKey = null
+          }
+        }, 600)
+      })
+      .catch(() => {
         transitionDisableKey = null
-      }
-    }, 600)
-  } catch {
-    // Ignore.
-  }
-}
-
-function hidePage(webContents) {
-  if (!webContents || webContents.isDestroyed()) return
-  if (pageHideKey) return
-  try {
-    pageHideKey = webContents.insertCSS('html { visibility: hidden !important; }')
-    setTimeout(() => {
-      if (pageHideKey) {
-        try {
-          webContents.removeInsertedCSS(pageHideKey)
-        } catch {
-          // Ignore.
-        }
-        pageHideKey = null
-      }
-    }, 1200)
-  } catch {
-    // Ignore.
-  }
-}
-
-function showPage(webContents) {
-  if (!webContents || webContents.isDestroyed()) return
-  if (!pageHideKey) {
-    try {
-      webContents.send('page:show')
-    } catch {
-      // Ignore.
-    }
-    return
-  }
-  try {
-    webContents.removeInsertedCSS(pageHideKey)
-  } catch {
-    // Ignore.
-  }
-  pageHideKey = null
-  try {
-    webContents.send('page:show')
+      })
   } catch {
     // Ignore.
   }
@@ -432,7 +395,8 @@ function showPage(webContents) {
 function applyWidthZoom(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   if (!mainWindow || mainWindow.isDestroyed()) return
-  const [width] = mainWindow.getContentSize()
+  const [rawWidth] = mainWindow.getContentSize()
+  const width = rawWidth || 1366
   if (!width) return
   const zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, width / ZOOM_REFERENCE_WIDTH))
   try {
@@ -445,7 +409,8 @@ function applyWidthZoom(webContents) {
 async function applyAutoZoom(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   if (!mainWindow || mainWindow.isDestroyed()) return
-  const [width] = mainWindow.getContentSize()
+  const [rawWidth] = mainWindow.getContentSize()
+  const width = rawWidth || 1366
   if (!width) return
 
   const seq = ++autoZoomSeq
@@ -556,17 +521,14 @@ function createMainWindow() {
   mainWindow.loadURL(settings.siteUrl)
   attachZoom(mainWindow.webContents)
   mainWindow.webContents.on('dom-ready', () => {
-    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     applySiteTheme(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
     applyAutoZoom(mainWindow?.webContents)
-    showPage(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-finish-load', () => {
     disableTransitionsTemporarily(mainWindow?.webContents)
     refit()
-    showPage(mainWindow?.webContents)
   })
   const refit = () => {
     disableTransitionsTemporarily(mainWindow?.webContents)
@@ -582,25 +544,20 @@ function createMainWindow() {
   mainWindow.on('leave-full-screen', refit)
   mainWindow.on('restore', refit)
   mainWindow.webContents.on('will-navigate', () => {
-    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-start-navigation', () => {
-    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-start-loading', () => {
-    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-navigate', () => {
-    hidePage(mainWindow?.webContents)
     disableTransitionsTemporarily(mainWindow?.webContents)
     refit()
-    showPage(mainWindow?.webContents)
   })
   mainWindow.webContents.on('did-navigate-in-page', () => {
     disableTransitionsTemporarily(mainWindow?.webContents)

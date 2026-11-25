@@ -22,21 +22,18 @@ if (location.protocol !== 'file:') {
         },
         { once: true },
       )
-    // Safety net: never leave the page hidden forever.
-    setTimeout(() => {
+    // Remove the hide once main applies the zoom, or after a short fallback
+    // so the page can never stay hidden forever.
+    const removeHide = () => {
       const el = document.getElementById('tf2pickup-hide')
       if (el) el.remove()
-    }, 1500)
+    }
+    ipcRenderer.on('page:show', removeHide)
+    setTimeout(removeHide, 400)
   } catch {
     // Ignore: hiding is best-effort polish.
   }
-
-  ipcRenderer.on('page:show', () => {
-    const el = document.getElementById('tf2pickup-hide')
-    if (el) el.remove()
-  })
 }
-
 const REQUEUE_PENDING_KEY = 'tf2pickup-desktop:requeue-pending'
 const MY_GAME_KEY = 'tf2pickup-desktop:my-game'
 const QUEUE_URL_CACHE_PREFIX = 'tf2pickup-desktop:queue-url:'
