@@ -1,0 +1,354 @@
+/* ---------------------------------------------------------------------------
+   TF2Pickup Desktop — FACEIT-inspired chrome for the native windows
+   (settings window and tray chat popup).
+--------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: dark;
+  --face-orange: #ff5500;
+  --face-orange-hot: #ff7321;
+  --face-bg: #0a0b0e;
+  --face-surface: #111318;
+  --face-raised: #171a20;
+  --face-hover: #1f232b;
+  --face-border: #272b34;
+  --face-text: #e8ebf0;
+  --face-muted: #8b92a0;
+  --face-font: 'Roboto Condensed', 'Segoe UI', system-ui, sans-serif;
+  --face-body: 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--face-bg);
+  color: var(--face-text);
+  font-family: var(--face-body);
+  font-size: 13px;
+}
+
+::selection {
+  background: var(--face-orange);
+  color: #fff;
+}
+
+* {
+  scrollbar-color: #343a45 transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--face-bg);
+  border-radius: 6px;
+  background: #343a45;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--face-orange);
+}
+
+/* Header ----------------------------------------------------------------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--face-border);
+  background: linear-gradient(180deg, #121419, #0d0f13);
+}
+
+.app-header .bar {
+  width: 4px;
+  height: 26px;
+  border-radius: 1px;
+  background: var(--face-orange);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-family: var(--face-font);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.app-header .version {
+  color: var(--face-muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* Cards ------------------------------------------------------------------ */
+
+.card {
+  margin: 0 0 14px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--face-border);
+  border-radius: 3px;
+  background: var(--face-surface);
+}
+
+.card:last-of-type {
+  margin-bottom: 0;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: #cfd4de;
+  font-family: var(--face-font);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card-title::before {
+  content: '';
+  width: 3px;
+  height: 13px;
+  border-radius: 1px;
+  background: var(--face-orange);
+}
+
+/* Rows and fields -------------------------------------------------------- */
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 7px 0;
+  cursor: pointer;
+}
+
+.row > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.field {
+  display: block;
+  padding: 7px 0;
+}
+
+.field > span {
+  display: block;
+  margin-bottom: 6px;
+  color: #c3c9d4;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.field:last-child {
+  padding-bottom: 0;
+}
+
+input[type='text'],
+select {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #333844;
+  border-radius: 2px;
+  background: #0d0e12;
+  color: var(--face-text);
+  font-family: var(--face-body);
+  font-size: 13px;
+}
+
+input[type='text']:focus,
+select:focus {
+  border-color: var(--face-orange);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--face-orange);
+}
+
+input[type='text']::placeholder {
+  color: #6d7482;
+}
+
+select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, #8b92a0 50%),
+    linear-gradient(135deg, #8b92a0 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+code {
+  padding: 1px 4px;
+  border: 1px solid #2b303a;
+  border-radius: 2px;
+  background: #0d0e12;
+  color: #ffb08a;
+  font-size: 11px;
+}
+
+.hint {
+  margin: 6px 0 0;
+  color: var(--face-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+/* Toggle switch ---------------------------------------------------------- */
+
+input[type='checkbox'] {
+  flex: none;
+  width: 38px;
+  height: 20px;
+  margin: 0;
+  border: 1px solid #343a45;
+  border-radius: 2px;
+  background: #171a20;
+  appearance: none;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+input[type='checkbox']::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 1px;
+  background: #6d7482;
+  transition:
+    left 120ms ease,
+    background 120ms ease;
+}
+
+input[type='checkbox']:hover {
+  border-color: #46505f;
+}
+
+input[type='checkbox']:checked {
+  border-color: var(--face-orange);
+  background: var(--face-orange);
+}
+
+input[type='checkbox']:checked::after {
+  left: 20px;
+  background: #fff;
+}
+
+input[type='checkbox']:focus-visible {
+  outline: 2px solid rgb(255 85 0 / 70%);
+  outline-offset: 1px;
+}
+
+/* Buttons ---------------------------------------------------------------- */
+
+button {
+  padding: 9px 18px;
+  border: 1px solid #333844;
+  border-radius: 2px;
+  background: #1b1e25;
+  color: #cfd4de;
+  font-family: var(--face-font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+button:hover {
+  border-color: #46505f;
+  background: #23272f;
+  color: #fff;
+}
+
+button.primary {
+  border-color: var(--face-orange);
+  background: var(--face-orange);
+  color: #fff;
+}
+
+button.primary:hover {
+  border-color: var(--face-orange-hot);
+  background: var(--face-orange-hot);
+  color: #fff;
+}
+
+/* Settings window layout ------------------------------------------------ */
+
+.settings-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.settings-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 22px 8px;
+}
+
+.settings-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px 14px;
+  border-top: 1px solid var(--face-border);
+  background: #0d0f13;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+#status {
+  flex: 1 1 140px;
+  color: #24d97d;
+  font-size: 11.5px;
+  min-height: 15px;
+}
+
+#status.error {
+  color: #ff8a8a;
+}

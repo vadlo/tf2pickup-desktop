@@ -1,0 +1,61 @@
+{
+  "name": "tf2pickup-desktop",
+  "version": "1.0.0",
+  "description": "Desktop client for tf2pick-up.ru with Team Fortress 2 integration",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "powershell -ExecutionPolicy Bypass -File build\\build.ps1",
+    "pack": "electron-builder --win --x64 --dir"
+  },
+  "build": {
+    "appId": "org.tf2pickup.desktop",
+    "productName": "TF2Pickup",
+    "copyright": "Copyright © 2026 tf2pickup.org community",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "settings.html",
+      "settings.js",
+      "chat-popup.html",
+      "chat-popup.js",
+      "chat-popup-preload.js",
+      "theme/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "icons",
+        "to": "icons"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icons/app.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "TF2Pickup",
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

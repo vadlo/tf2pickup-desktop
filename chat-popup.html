@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Чат TF2Pickup</title>
+    <link rel="stylesheet" href="theme/fonts.css" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --face-orange: #ff5500;
+        --face-orange-hot: #ff7321;
+        --face-bg: #0a0b0e;
+        --face-surface: #111318;
+        --face-raised: #171a20;
+        --face-border: #272b34;
+        --face-text: #e8ebf0;
+        --face-muted: #8b92a0;
+        --face-font: 'Roboto Condensed', 'Segoe UI', system-ui, sans-serif;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        font-size: 13px;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--face-border);
+        border-radius: 8px;
+        background: var(--face-bg);
+        color: var(--face-text);
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--face-border);
+        background: linear-gradient(180deg, #14161c, #0d0f13);
+        -webkit-app-region: drag;
+      }
+
+      header .bar {
+        width: 4px;
+        height: 20px;
+        border-radius: 1px;
+        background: var(--face-orange);
+      }
+
+      header h1 {
+        margin: 0;
+        font-family: var(--face-font);
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        line-height: 1;
+        text-transform: uppercase;
+      }
+
+      header .sub {
+        color: var(--face-muted);
+        font-size: 11px;
+        letter-spacing: 0.05em;
+        text-transform: lowercase;
+      }
+
+      header .actions {
+        display: flex;
+        gap: 4px;
+        margin-left: auto;
+        -webkit-app-region: no-drag;
+      }
+
+      header button {
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: 2px;
+        background: transparent;
+        color: #8b92a0;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      header button:hover {
+        border-color: var(--face-border);
+        background: var(--face-raised);
+        color: #fff;
+      }
+
+      #messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+      }
+
+      .msg {
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+
+      .msg .meta {
+        color: var(--face-muted);
+        font-size: 11px;
+      }
+
+      .msg .meta .time {
+        color: #6d7482;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .msg .author {
+        color: var(--face-orange);
+        font-weight: 700;
+      }
+
+      .msg .body {
+        white-space: pre-wrap;
+        color: var(--face-text);
+      }
+
+      .empty {
+        margin-top: 28px;
+        color: var(--face-muted);
+        text-align: center;
+      }
+
+      #status {
+        min-height: 15px;
+        padding: 0 12px 6px;
+        color: var(--face-muted);
+        font-size: 11px;
+      }
+
+      form {
+        display: flex;
+        gap: 8px;
+        padding: 10px 12px 12px;
+        border-top: 1px solid var(--face-border);
+        background: #0d0f13;
+      }
+
+      input {
+        flex: 1;
+        min-width: 0;
+        padding: 9px 10px;
+        border: 1px solid #333844;
+        border-radius: 2px;
+        background: #0a0b0e;
+        color: var(--face-text);
+        font: inherit;
+      }
+
+      input::placeholder {
+        color: #6d7482;
+      }
+
+      input:focus {
+        border-color: var(--face-orange);
+        outline: none;
+        box-shadow: 0 0 0 1px var(--face-orange);
+      }
+
+      button.send {
+        padding: 9px 14px;
+        border: 1px solid var(--face-orange);
+        border-radius: 2px;
+        background: var(--face-orange);
+        color: #fff;
+        font-family: var(--face-font);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: background 120ms ease;
+      }
+
+      button.send:hover:enabled {
+        border-color: var(--face-orange-hot);
+        background: var(--face-orange-hot);
+      }
+
+      button.send:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+
+      ::selection {
+        background: var(--face-orange);
+        color: #fff;
+      }
+
+      ::-webkit-scrollbar {
+        width: 9px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        border: 2px solid var(--face-bg);
+        border-radius: 6px;
+        background: #343a45;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--face-orange);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="bar"></div>
+      <h1>TF2Pickup</h1>
+      <span class="sub">чат</span>
+      <div class="actions">
+        <button id="open-settings" title="Настройки">⚙</button>
+        <button id="open-app" title="Открыть приложение">⤢</button>
+        <button id="close" title="Закрыть (Esc)">✕</button>
+      </div>
+    </header>
+    <div id="messages"></div>
+    <div id="status"></div>
+    <form id="send-form">
+      <input
+        id="message"
+        type="text"
+        maxlength="300"
+        autocomplete="off"
+        placeholder="Написать в чат…"
+      />
+      <button class="send" type="submit" id="send">Отправить</button>
+    </form>
+    <script src="chat-popup.js"></script>
+  </body>
+</html>

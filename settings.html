@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Настройки TF2Pickup</title>
+    <link rel="stylesheet" href="theme/fonts.css" />
+    <link rel="stylesheet" href="theme/app.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="bar"></div>
+      <div>
+        <h1>Настройки</h1>
+        <div class="version" id="version">загрузка…</div>
+      </div>
+    </header>
+
+    <form id="settings-form" class="settings-body">
+      <div class="settings-scroll">
+        <section class="card">
+          <h2 class="card-title">Оформление</h2>
+          <label class="row">
+            <span>Тема FACEIT для сайта</span>
+            <input type="checkbox" id="faceitTheme" name="faceitTheme" />
+          </label>
+          <p class="hint">
+            Тёмная тема с оранжевыми акцентами в стиле FACEIT: применяется к страницам
+            tf2pick-up.ru внутри приложения. Выключите, чтобы вернуть оформление сайта.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Сайт</h2>
+          <label class="field">
+            <span>Адрес сайта</span>
+            <input type="text" id="siteUrl" name="siteUrl" spellcheck="false" />
+          </label>
+          <p class="hint">Приложение откроет этот адрес при запуске.</p>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Очередь после лобби</h2>
+          <label class="row">
+            <span>Автоматически занимать слот после лобби</span>
+            <input type="checkbox" id="autoRequeue" name="autoRequeue" />
+          </label>
+          <label class="field">
+            <span>Режим</span>
+            <select id="requeueQueue" name="requeueQueue">
+              <option value="6v6">6v6</option>
+              <option value="9v9">9v9</option>
+              <option value="ultiduo">ultiduo</option>
+              <option value="4v4">4v4</option>
+              <option value="3v3">3v3</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Класс</span>
+            <select id="requeueClass" name="requeueClass"></select>
+          </label>
+          <label class="field">
+            <span>Слот</span>
+            <select id="requeueSlot" name="requeueSlot"></select>
+          </label>
+          <p class="hint">
+            Когда матч с вами закончится, приложение откроет выбранный режим и займёт свободный
+            слот выбранного класса. Если указанный слот занят — будет использован первый свободный
+            слот этого класса.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Team Fortress 2</h2>
+          <label class="row">
+            <span>Подключаться без подтверждения</span>
+            <input type="checkbox" id="autoConnect" name="autoConnect" />
+          </label>
+          <label class="row">
+            <span>Автоподключение, когда ваш сервер готов</span>
+            <input type="checkbox" id="autoJoin" name="autoJoin" />
+          </label>
+          <p class="hint">
+            Автоподключение срабатывает только для вашей игры (кнопка «join game»), но не для STV.
+          </p>
+          <label class="row">
+            <span>Автоматически включать pre-ready</span>
+            <input type="checkbox" id="autoPreReady" name="autoPreReady" />
+          </label>
+          <label class="row">
+            <span>Автоматически нажимать «I'm ready»</span>
+            <input type="checkbox" id="autoReady" name="autoReady" />
+          </label>
+          <p class="hint">
+            «I'm ready» нажимается сразу при появлении диалога — включайте только если готовы
+            играть в любой момент.
+          </p>
+          <label class="row">
+            <span>Уведомлять об автодействиях</span>
+            <input type="checkbox" id="notifyAutoActions" name="notifyAutoActions" />
+          </label>
+          <label class="row">
+            <span>Сворачивать окно после запуска игры</span>
+            <input type="checkbox" id="minimizeOnJoin" name="minimizeOnJoin" />
+          </label>
+          <label class="field">
+            <span>Способ запуска</span>
+            <select id="launchMode" name="launchMode">
+              <option value="steam-uri">Steam URI (рекомендуется)</option>
+              <option value="steam-exe">Запуск steam.exe с параметрами</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Путь к steam.exe</span>
+            <input type="text" id="steamExePath" name="steamExePath" spellcheck="false" />
+          </label>
+          <label class="field">
+            <span>Дополнительные параметры запуска TF2</span>
+            <input type="text" id="launchOptions" name="launchOptions" spellcheck="false" />
+          </label>
+          <p class="hint">
+            Параметры (например, <code>-noforcedmparms -noforcemaccel</code>) применяются только в
+            режиме «Запуск steam.exe». Путь к Steam определяется автоматически, если поле пусто.
+          </p>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">Уведомления и окно</h2>
+          <label class="row">
+            <span>Уведомлять о начале игры (ready up)</span>
+            <input type="checkbox" id="notifyReadyUp" name="notifyReadyUp" />
+          </label>
+          <label class="row">
+            <span>Уведомлять о готовности сервера</span>
+            <input type="checkbox" id="notifyServerReady" name="notifyServerReady" />
+          </label>
+          <label class="row">
+            <span>Показывать чат в трее</span>
+            <input type="checkbox" id="trayChat" name="trayChat" />
+          </label>
+          <p class="hint">
+            Клик по иконке открывает окно чата у трея, сообщения дублируются в подсказке иконки и в
+            её меню.
+          </p>
+          <label class="row">
+            <span>Сворачивать в трей при закрытии окна</span>
+            <input type="checkbox" id="closeToTray" name="closeToTray" />
+          </label>
+          <label class="row">
+            <span>Запускать при входе в Windows</span>
+            <input type="checkbox" id="launchOnStartup" name="launchOnStartup" />
+          </label>
+        </section>
+      </div>
+
+      <footer class="settings-footer">
+        <div id="status"></div>
+        <div class="actions">
+          <button type="button" id="reset">Сбросить</button>
+          <button type="button" id="cancel">Отмена</button>
+          <button type="submit" class="primary">Сохранить</button>
+        </div>
+      </footer>
+    </form>
+
+    <script src="settings.js"></script>
+  </body>
+</html>

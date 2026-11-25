@@ -1,0 +1,617 @@
+/* ---------------------------------------------------------------------------
+   TF2Pickup Desktop — FACEIT-inspired skin for tf2pick-up.ru
+   ---------------------------------------------------------------------------
+   The site is built with Tailwind v4, so almost every colour is read from a
+   CSS custom property. Overriding the zinc/amber scale plus a handful of
+   component rules restyles the whole interface without touching the markup.
+   Fonts live in fonts.css (base64 Roboto Condensed, cyrillic + latin).
+--------------------------------------------------------------------------- */
+
+:root {
+  --face-orange: #ff5500;
+  --face-orange-hot: #ff7321;
+  --face-orange-soft: rgb(255 85 0 / 12%);
+  --face-bg: #0a0b0e;
+  --face-surface: #111318;
+  --face-raised: #171a20;
+  --face-hover: #1f232b;
+  --face-border: #272b34;
+  --face-text: #e8ebf0;
+  --face-muted: #8b92a0;
+  --face-font: 'Roboto Condensed', 'Segoe UI', system-ui, sans-serif;
+
+  /* Neutral scale: FACEIT is almost pure black with cool grey cards. */
+  --color-zinc-950: #0a0b0e;
+  --color-zinc-925: #0e1014;
+  --color-zinc-900: #111318;
+  --color-zinc-850: #14161c;
+  --color-zinc-800: #171a20;
+  --color-zinc-700: #20242c;
+  --color-zinc-600: #2b303a;
+  --color-zinc-500: #464c59;
+  --color-zinc-400: #848b99;
+  --color-zinc-300: #b6bcc8;
+  --color-zinc-200: #dfe3ea;
+  --color-zinc-100: #f1f3f7;
+  --color-slate-200: #e6e9ef;
+  --color-slate-700: #31363f;
+  --color-gray-200: #e6e9ef;
+  --color-gray-400: #848b99;
+  --color-gray-700: #31363f;
+
+  /* Accents: one signature orange instead of the site's amber/orange mix. */
+  --color-amber-400: #ff7321;
+  --color-orange-300: #ff8a3d;
+  --color-orange-400: #ff6a15;
+  --color-yellow-400: #ffb020;
+  --color-yellow-600: #ff8a00;
+  --color-alert: #ff5500;
+  --color-map-heading: #ff5500;
+  --color-crimson-600: #ff3b30;
+  --color-crimson-700: #e02b21;
+  --color-crimson-800: #a82019;
+  --color-game-result-win: #24d97d;
+  --color-emerald-500: #1fd17a;
+  --color-emerald-600: #16b869;
+  --color-emerald-700: #0f8a4e;
+  --color-emerald-800: #0b6b3d;
+  --color-emerald-900: #084c2c;
+
+  /* Sharper geometry. */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+  --radius-3xl: 6px;
+}
+
+/* Base ------------------------------------------------------------------- */
+
+html,
+body {
+  background-color: var(--face-bg);
+}
+
+body {
+  color: var(--face-text);
+  background-image: radial-gradient(
+    1100px 420px at 50% -180px,
+    rgb(255 85 0 / 14%),
+    transparent 72%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--face-font);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+::selection {
+  background: var(--face-orange);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(255 85 0 / 75%);
+  outline-offset: 1px;
+}
+
+* {
+  scrollbar-color: #343a45 transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid var(--face-bg);
+  border-radius: 6px;
+  background: #343a45;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--face-orange);
+}
+
+/* Header ----------------------------------------------------------------- */
+
+.nav-wide {
+  border-bottom: 1px solid var(--face-border);
+  background: rgb(10 11 14 / 92%);
+  backdrop-filter: blur(10px);
+}
+
+.nav-menu-item {
+  padding: 6px 2px;
+  border-bottom: 2px solid transparent;
+  color: #9aa1ae;
+  font-family: var(--face-font);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
+}
+
+.nav-menu-item:hover {
+  border-bottom-color: var(--face-orange);
+  color: #fff;
+}
+
+.nav-menu-item svg {
+  opacity: 0.85;
+}
+
+.nav-steam-button {
+  border-radius: 2px;
+  background: var(--face-orange);
+  color: #fff;
+  transition: background 120ms ease;
+}
+
+.nav-steam-button:hover {
+  background: var(--face-orange-hot);
+}
+
+.nav-steam-button span {
+  letter-spacing: 0.08em;
+}
+
+.nav-steam-button .icon {
+  border-radius: 1px;
+  background: rgb(0 0 0 / 22%);
+  color: #fff;
+}
+
+/* Sidebar tabs ----------------------------------------------------------- */
+
+.tab {
+  border-color: var(--face-border);
+  border-radius: 3px;
+  background: #0d0e12;
+}
+
+.tab-link {
+  border-radius: 2px;
+  font-family: var(--face-font);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tab-link.active,
+.queue-sidebar .tab-link:hover {
+  background: #1c2028;
+  color: #fff;
+}
+
+.tab-link.active {
+  box-shadow: inset 0 -2px 0 var(--face-orange);
+}
+
+.tab-link.active svg {
+  color: var(--face-orange);
+}
+
+/* Queue switcher + state ------------------------------------------------ */
+
+.queue-state,
+.queue-switcher {
+  border-color: var(--face-border);
+  border-radius: 3px;
+  background: var(--face-surface);
+}
+
+.queue-switcher-indicator {
+  border-radius: 2px;
+  background: var(--face-orange);
+}
+
+.queue-switcher-option {
+  font-family: var(--face-font);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.queue-switcher-option:hover {
+  background: rgb(255 255 255 / 4%);
+}
+
+.queue-switcher-option[aria-current='page'] {
+  color: #fff;
+}
+
+.queue-switcher-option[data-joined] {
+  border-color: rgb(255 255 255 / 22%);
+}
+
+.queue-switcher-option[data-joined] .queue-switcher-label::before {
+  background: var(--face-orange);
+}
+
+.queue-switcher-count {
+  color: var(--face-muted);
+  font-weight: 400;
+}
+
+.queue-switcher-option[aria-current='page'] .queue-switcher-count {
+  color: rgb(255 255 255 / 75%);
+}
+
+.queue-player-count {
+  font-family: var(--face-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.queue-state-actions .button {
+  border-radius: 2px;
+  font-family: var(--face-font);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.queue-state-actions .queue-clear-button {
+  border-color: rgb(255 85 0 / 55%);
+  background: rgb(255 85 0 / 16%);
+  color: #ffb08a;
+}
+
+.queue-state-actions .queue-clear-button:hover {
+  background: rgb(255 85 0 / 26%);
+}
+
+/* Buttons with data-variant (pre-ready, clear queue, profile menu, ...) */
+
+.button[data-variant='lighter'] {
+  border: 1px solid var(--face-border);
+  background: #20242c;
+  color: var(--face-text);
+}
+
+.button[data-variant='lighter']:hover {
+  background: #2b303a;
+  color: #fff;
+}
+
+.button[data-variant='lighter']:disabled {
+  background: #15171c;
+  color: #6d7482;
+}
+
+.button[data-variant='darker'] {
+  border: 1px solid var(--face-border);
+  background: #0d0e12;
+}
+
+.button[data-variant='alert'] {
+  border: 1px solid rgb(255 85 0 / 45%);
+  background: #0d0e12;
+  color: var(--face-orange);
+}
+
+.button[data-variant='alert']:hover {
+  background: rgb(255 85 0 / 12%);
+  color: #ffb08a;
+}
+
+/* Armed pre-ready: the one solid orange control in the toolbar. */
+
+#pre-ready-up-button[aria-pressed='true'] {
+  border-color: var(--face-orange);
+  background: var(--face-orange);
+  color: #fff;
+}
+
+#pre-ready-up-button[aria-pressed='true']:hover {
+  border-color: var(--face-orange-hot);
+  background: var(--face-orange-hot);
+}
+
+#pre-ready-up-button[aria-pressed='true'] svg {
+  color: #fff;
+}
+
+#pre-ready-up-button[aria-pressed='true'] [data-countdown] {
+  color: #fff;
+}
+
+/* Queue slots ------------------------------------------------------------ */
+
+.queue-class-heading {
+  color: #cfd4de;
+  font-family: var(--face-font);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.queue-slot {
+  border-color: var(--face-border);
+  border-radius: 3px;
+  background: var(--face-raised);
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.queue-slot:has(>.player-info) {
+  border-color: #2f343f;
+}
+
+.queue-slot.queue-slot-own {
+  border-color: var(--face-orange);
+  background: rgb(255 85 0 / 12%);
+  box-shadow: inset 0 0 0 1px rgb(255 85 0 / 35%);
+}
+
+.queue-slot.queue-slot-ready {
+  border-color: #1fd17a;
+  background: rgb(31 209 122 / 12%);
+  box-shadow: inset 0 0 0 1px rgb(31 209 122 / 30%);
+}
+
+.queue-slot:has(>.join-queue-button:hover:enabled),
+.queue-slot:has(>.join-queue-button:focus-visible) {
+  border-color: var(--face-orange);
+  background: #1b1e25;
+}
+
+.queue-slot .join-queue-button {
+  border-radius: 2px;
+  color: #cfd4de;
+}
+
+.queue-slot .join-queue-button:hover:enabled,
+.queue-slot .join-queue-button:focus-visible {
+  background: rgb(255 85 0 / 14%);
+  color: #fff;
+}
+
+.queue-slot .join-queue-button:hover:enabled>svg,
+.queue-slot .join-queue-button:focus-visible>svg {
+  color: var(--face-orange);
+  opacity: 1;
+}
+
+.queue-slot:has(>.join-queue-button:disabled) {
+  background: repeating-linear-gradient(
+    -45deg,
+    #101216 0,
+    #101216 14px,
+    #14161b 14px,
+    #14161b 28px
+  );
+}
+
+.queue-slot .player-info {
+  border-radius: 2px;
+  background: #20242c;
+}
+
+.queue-slot.queue-slot-own .player-info {
+  background: rgb(255 85 0 / 20%);
+}
+
+.queue-slot.queue-slot-ready .player-info {
+  background: rgb(31 209 122 / 18%);
+}
+
+.queue-slot .player-name-text {
+  font-family: var(--face-font);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.queue-slot .player-info>img {
+  border-radius: 2px;
+}
+
+.queue-slot .leave-queue-button,
+.queue-slot .mark-as-friend-button .mark {
+  border-radius: 2px;
+  background: #14171c;
+}
+
+.queue-slot .leave-queue-button:hover,
+.queue-slot .mark-as-friend-button:hover .mark {
+  background: var(--face-orange);
+  color: #fff;
+}
+
+.queue-slot.queue-slot-ready .leave-queue-button,
+.queue-slot.queue-slot-ready .mark-as-friend-button .mark {
+  background: rgb(8 76 44 / 80%);
+}
+
+.queue-team-summary {
+  border-radius: 3px;
+  font-family: var(--face-font);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* Banners ---------------------------------------------------------------- */
+
+.banner {
+  border-left: 3px solid var(--face-orange);
+  border-radius: 2px;
+  background: #14161b;
+  color: #cfd4de;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.banner[data-tone='info'] {
+  border-left-color: #3b414d;
+  background: #111318;
+  color: #cfd4de;
+}
+
+.banner[data-tone='warning'] {
+  border-left-color: #ff2d55;
+  background: #2a1015;
+  color: #ffd9df;
+}
+
+.banner[data-tone='alert'] {
+  border-left-color: var(--face-orange);
+  background: #2a1608;
+  color: #ffd9c2;
+}
+
+.banner a {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.banner .prose {
+  color: inherit;
+}
+
+/* Chat ------------------------------------------------------------------- */
+
+.chat .message-list p:hover {
+  background: rgb(255 255 255 / 3%);
+}
+
+.chat .message-list .chat-date-separator {
+  color: #6d7482;
+  font-family: var(--face-font);
+  letter-spacing: 0.12em;
+}
+
+.chat .message-list p .at {
+  color: #6d7482;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chat .message-list p a.author {
+  color: #cfd4de;
+}
+
+.chat .message-list p a.author:hover {
+  color: var(--face-orange);
+}
+
+.chat .message-list p a.author.admin {
+  color: var(--face-orange);
+}
+
+.chat .message-list p .body a.mention {
+  border-radius: 2px;
+  background: rgb(255 85 0 / 18%);
+  color: #ffb08a;
+}
+
+#chat-prompt input[name='message'] {
+  border: 1px solid var(--face-border);
+  border-radius: 2px;
+  background: #0d0e12;
+  color: var(--face-text);
+  padding: 8px 10px;
+}
+
+#chat-prompt input[name='message']:focus {
+  border-color: var(--face-orange);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--face-orange);
+}
+
+#chat-prompt button[type='submit'] {
+  border-radius: 2px;
+  background: var(--face-orange);
+  color: #fff;
+  font-family: var(--face-font);
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0 14px;
+  transition: background 120ms ease;
+}
+
+#chat-prompt button[type='submit']:hover {
+  background: var(--face-orange-hot);
+}
+
+/* Map vote --------------------------------------------------------------- */
+
+.map-vote-button,
+.map-reroll-placeholder {
+  border-radius: 3px;
+}
+
+.map-vote-button::before {
+  background: linear-gradient(90deg, #0f1116 22%, rgb(15 17 22 / 85%) 45%, transparent);
+}
+
+.map-vote-button:hover:enabled {
+  border-color: rgb(255 85 0 / 65%);
+}
+
+.map-vote-button[aria-checked='true'] {
+  border: 2px solid var(--face-orange);
+  padding: 11px;
+}
+
+.map-reroll-caption {
+  font-family: var(--face-font);
+  text-transform: uppercase;
+}
+
+/* Lists ------------------------------------------------------------------ */
+
+.online-player-list li:nth-child(odd) {
+  background: #14161b;
+}
+
+.online-player-list li:nth-child(2n) {
+  background: #111318;
+}
+
+.online-player-list a {
+  font-weight: 400;
+}
+
+.online-player-list a:hover {
+  background: rgb(255 85 0 / 12%);
+  color: #fff;
+  text-decoration: none;
+}
+
+.online-player-list a.admin {
+  color: var(--face-orange);
+}
+
+/* Cursor + tooltips ------------------------------------------------------ */
+
+.tooltip {
+  border-radius: 2px;
+}
