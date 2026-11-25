@@ -326,10 +326,46 @@ function handleNavigation(event, url) {
   shell.openExternal(url)
 }
 
+// The site is designed as a desktop layout. Instead of letting it break on
+// small windows, scale the whole page so the design always fits the window
+// (like a browser zoom-to-fit). The reference width matches the default
+// window, so 1366 px wide -> 100%.
+const ZOOM_REFERENCE_WIDTH = 1366
+const ZOOM_MIN = 0.6
+const ZOOM_MAX = 1.35
+
+let autoZoomTimer = null
+
+function autoZoomFactor(width) {
+  if (!width) return 1
+  const factor = width / ZOOM_REFERENCE_WIDTH
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, factor))
+}
+
+function applyAutoZoom(webContents) {
+  if (!webContents || webContents.isDestroyed()) return
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  const [width] = mainWindow.getContentSize()
+  if (!width) return
+  try {
+    webContents.setZoomFactor(autoZoomFactor(width))
+  } catch (error) {
+    // Ignore: a page can be replaced while the zoom is applied.
+  }
+}
+
+function scheduleAutoZoom(webContents) {
+  if (autoZoomTimer) clearTimeout(autoZoomTimer)
+  autoZoomTimer = setTimeout(() => {
+    autoZoomTimer = null
+    applyAutoZoom(webContents)
+  }, 120)
+}
+
 function attachZoom(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   try {
-    webContents.setVisualZoomLevelLimits(0.5, 3)
+    webContents.setVisualZoomLevelLimits(ZOOM_MIN, 3)
   } catch (error) {
     // Older Electron builds may not support this; ignore.
   }
@@ -378,7 +414,17 @@ function createMainWindow() {
   attachZoom(mainWindow.webContents)
   mainWindow.webContents.on('dom-ready', () => {
     applySiteTheme(mainWindow?.webContents)
+    applyAutoZoom(mainWindow?.webContents)
   })
+  mainWindow.webContents.on('did-finish-load', () => {
+    applyAutoZoom(mainWindow?.webContents)
+  })
+  mainWindow.on('resize', () => scheduleAutoZoom(mainWindow?.webContents))
+  mainWindow.on('maximize', () => scheduleAutoZoom(mainWindow?.webContents))
+  mainWindow.on('unmaximize', () => scheduleAutoZoom(mainWindow?.webContents))
+  mainWindow.on('enter-full-screen', () => scheduleAutoZoom(mainWindow?.webContents))
+  mainWindow.on('leave-full-screen', () => scheduleAutoZoom(mainWindow?.webContents))
+  applyAutoZoom(mainWindow.webContents)
 
   mainWindow.on('close', event => {
     if (isQuitting || !settings.closeToTray) return
