@@ -326,6 +326,29 @@ function handleNavigation(event, url) {
   shell.openExternal(url)
 }
 
+function attachZoom(webContents) {
+  if (!webContents || webContents.isDestroyed()) return
+  try {
+    webContents.setVisualZoomLevelLimits(0.5, 3)
+  } catch (error) {
+    // Older Electron builds may not support this; ignore.
+  }
+  webContents.on('before-input-event', (event, input) => {
+    if (!(input.control || input.meta)) return
+    const key = input.key
+    if (key === '=' || key === '+') {
+      webContents.setZoomLevel(webContents.getZoomLevel() + 0.5)
+      event.preventDefault()
+    } else if (key === '-') {
+      webContents.setZoomLevel(webContents.getZoomLevel() - 0.5)
+      event.preventDefault()
+    } else if (key === '0') {
+      webContents.setZoomLevel(0)
+      event.preventDefault()
+    }
+  })
+}
+
 function createMainWindow() {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.show()
@@ -352,6 +375,7 @@ function createMainWindow() {
 
   mainWindow.setMenu(null)
   mainWindow.loadURL(settings.siteUrl)
+  attachZoom(mainWindow.webContents)
   mainWindow.webContents.on('dom-ready', () => {
     applySiteTheme(mainWindow?.webContents)
   })
@@ -403,7 +427,11 @@ function createSettingsWindow() {
   settingsWindow = new BrowserWindow({
     width: 560,
     height: 820,
-    resizable: false,
+    minWidth: 460,
+    minHeight: 620,
+    maxWidth: 900,
+    maxHeight: 1200,
+    resizable: true,
     // No `parent`: a child of the main window is not shown by Windows while the
     // main window is hidden in the tray, which made the settings window look
     // like it never opened.

@@ -31,7 +31,13 @@ body {
   margin: 0;
   display: flex;
   flex-direction: column;
-  background: var(--face-bg);
+  background-color: var(--face-bg);
+  background-image:
+    radial-gradient(900px 420px at 50% -160px, rgb(255 85 0 / 14%), transparent 70%),
+    radial-gradient(600px 320px at 100% 0%, rgb(255 85 0 / 6%), transparent 62%),
+    linear-gradient(180deg, #0a0b0e 0%, #07080a 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--face-text);
   font-family: var(--face-body);
   font-size: 13px;
@@ -314,14 +320,12 @@ button.primary:hover {
 
 .settings-body {
   display: flex;
-  flex: 1;
   flex-direction: column;
-  min-height: 0;
+  height: 100%;
 }
 
 .settings-scroll {
   flex: 1;
-  min-height: 0;
   overflow-y: auto;
   padding: 16px 22px 8px;
 }

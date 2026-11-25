@@ -76,13 +76,36 @@ body {
 
 body {
   color: var(--face-text);
-  background-image: radial-gradient(
-    1100px 420px at 50% -180px,
-    rgb(255 85 0 / 14%),
-    transparent 72%
-  );
+  background-color: var(--face-bg);
+  background-image:
+    radial-gradient(1200px 520px at 50% -220px, rgb(255 85 0 / 16%), transparent 70%),
+    radial-gradient(900px 420px at 100% 0%, rgb(255 85 0 / 7%), transparent 62%),
+    radial-gradient(700px 360px at 0% 100%, rgb(255 85 0 / 5%), transparent 60%),
+    linear-gradient(180deg, #0a0b0e 0%, #07080a 100%);
   background-repeat: no-repeat;
   background-attachment: fixed;
+  background-size: 100% 100%;
+}
+
+/* Subtle FACEIT-style grid overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 2.2%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 2.2%) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 20%, transparent 75%);
+}
+
+/* Keep page content above the grid */
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 h1,
