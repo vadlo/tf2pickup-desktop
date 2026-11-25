@@ -338,7 +338,7 @@ const ZOOM_MAX = 1
 // on long pages, so the height-driven shrink stops at a readable scale. The
 // width-driven scale may go lower, because that is required to fit narrow
 // windows without horizontal scrolling.
-const ZOOM_HEIGHT_FLOOR = ZOOM_MIN
+const ZOOM_HEIGHT_FLOOR = 0.7
 
 let autoZoomTimer = null
 let autoZoomSeq = 0
@@ -379,7 +379,7 @@ function disableTransitionsTemporarily(webContents) {
         }
         transitionDisableKey = null
       }
-    }, 350)
+    }, 600)
   } catch {
     // Ignore.
   }
@@ -528,6 +528,14 @@ function createMainWindow() {
   mainWindow.on('leave-full-screen', refit)
   mainWindow.on('restore', refit)
   mainWindow.webContents.on('will-navigate', () => {
+    disableTransitionsTemporarily(mainWindow?.webContents)
+    applyWidthZoom(mainWindow?.webContents)
+  })
+  mainWindow.webContents.on('did-start-navigation', () => {
+    disableTransitionsTemporarily(mainWindow?.webContents)
+    applyWidthZoom(mainWindow?.webContents)
+  })
+  mainWindow.webContents.on('did-start-loading', () => {
     disableTransitionsTemporarily(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
   })

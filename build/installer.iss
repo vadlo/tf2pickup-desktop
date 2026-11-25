@@ -1,5 +1,5 @@
 #define AppName "TF2Pickup"
-#define AppVersion "1.0.5"
+#define AppVersion "1.0.6"
 #define AppPublisher "tf2pickup.org community"
 #define AppExeName "TF2Pickup.exe"
 
@@ -18,7 +18,7 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist
-OutputBaseFilename=TF2Pickup Setup 1.0.5
+OutputBaseFilename=TF2Pickup Setup 1.0.6
 SetupIconFile=..\icons\app.ico
 UninstallDisplayIcon={app}\{#AppExeName}
 UninstallDisplayName={#AppName} {#AppVersion}
