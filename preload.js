@@ -781,6 +781,32 @@ function setupChatBridge() {
   schedule()
 }
 
+function watchPageSize() {
+  if (typeof ResizeObserver === 'undefined') return
+
+  let lastHeight = 0
+  let timer = null
+
+  const measure = () =>
+    Math.max(
+      document.documentElement ? document.documentElement.scrollHeight : 0,
+      document.body ? document.body.scrollHeight : 0,
+    )
+
+  const report = () => {
+    const height = measure()
+    if (Math.abs(height - lastHeight) < 24) return
+    lastHeight = height
+    clearTimeout(timer)
+    timer = setTimeout(() => ipcRenderer.send('page:size-changed'), 250)
+  }
+
+  const observer = new ResizeObserver(report)
+  if (document.documentElement) observer.observe(document.documentElement)
+  if (document.body) observer.observe(document.body)
+  report()
+}
+
 function setupQueueStateBridge() {
   let lastSignature = ''
   let scheduled = false
@@ -869,6 +895,7 @@ if (location.protocol !== 'file:') {
       setupAutoRequeue()
       setupChatBridge()
       setupQueueStateBridge()
+      watchPageSize()
     })
   } catch (error) {
     console.error('TF2Pickup preload integration failed:', error)

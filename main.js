@@ -326,31 +326,70 @@ function handleNavigation(event, url) {
   shell.openExternal(url)
 }
 
-// The site is designed as a desktop layout. Instead of letting it break on
-// small windows, scale the whole page so the design always fits the window
-// (like a browser zoom-to-fit). The reference width matches the default
+// The site is a desktop layout. Instead of enlarging it, scale the whole page
+// so the design fits the window with as little scrolling as possible: first
+// fit the design width (never above 100%), then shrink further while the page
+// is still taller than the viewport. The reference width matches the default
 // window, so 1366 px wide -> 100%.
 const ZOOM_REFERENCE_WIDTH = 1366
-const ZOOM_MIN = 0.6
-const ZOOM_MAX = 1.35
+const ZOOM_MIN = 0.5
+const ZOOM_MAX = 1
+// Shrinking the whole page to fit its full height quickly makes text unreadable
+// on long pages, so the height-driven shrink stops at a readable scale. The
+// width-driven scale may go lower, because that is required to fit narrow
+// windows without horizontal scrolling.
+const ZOOM_HEIGHT_FLOOR = 0.8
 
 let autoZoomTimer = null
+let autoZoomSeq = 0
 
-function autoZoomFactor(width) {
-  if (!width) return 1
-  const factor = width / ZOOM_REFERENCE_WIDTH
-  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, factor))
+function readPageMetrics(webContents) {
+  const read = webContents
+    .executeJavaScript(
+      `(() => {
+        const doc = document.documentElement
+        const body = document.body
+        return {
+          scrollHeight: Math.max(doc ? doc.scrollHeight : 0, body ? body.scrollHeight : 0),
+          innerHeight: window.innerHeight,
+        }
+      })()`,
+      true,
+    )
+    .catch(() => null)
+  // Never let a measurement block the next fit attempt.
+  const timeout = new Promise(resolve => setTimeout(() => resolve(null), 1200))
+  return Promise.race([read, timeout])
 }
 
-function applyAutoZoom(webContents) {
+async function applyAutoZoom(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   if (!mainWindow || mainWindow.isDestroyed()) return
   const [width] = mainWindow.getContentSize()
   if (!width) return
+
+  const seq = ++autoZoomSeq
+  const widthZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, width / ZOOM_REFERENCE_WIDTH))
+  const heightFloor = Math.min(widthZoom, ZOOM_HEIGHT_FLOOR)
+  let zoom = widthZoom
+
   try {
-    webContents.setZoomFactor(autoZoomFactor(width))
+    if (Math.abs(webContents.getZoomFactor() - zoom) > 0.001) webContents.setZoomFactor(zoom)
+    // The responsive layout changes together with the zoom, so the first
+    // estimate may need a couple of small corrections.
+    for (let pass = 0; pass < 3; pass += 1) {
+      const metrics = await readPageMetrics(webContents)
+      if (seq !== autoZoomSeq) return
+      if (!metrics || !metrics.innerHeight) break
+      const ratio = metrics.innerHeight / Math.max(1, metrics.scrollHeight)
+      if (ratio >= 0.995) break
+      const next = Math.max(heightFloor, zoom * ratio)
+      if (next >= zoom - 0.002) break
+      zoom = next
+      webContents.setZoomFactor(zoom)
+    }
   } catch (error) {
-    // Ignore: a page can be replaced while the zoom is applied.
+    // Ignore: the page can be replaced while the zoom is applied.
   }
 }
 
@@ -358,8 +397,8 @@ function scheduleAutoZoom(webContents) {
   if (autoZoomTimer) clearTimeout(autoZoomTimer)
   autoZoomTimer = setTimeout(() => {
     autoZoomTimer = null
-    applyAutoZoom(webContents)
-  }, 120)
+    void applyAutoZoom(webContents)
+  }, 150)
 }
 
 function attachZoom(webContents) {
@@ -424,6 +463,10 @@ function createMainWindow() {
   mainWindow.on('unmaximize', () => scheduleAutoZoom(mainWindow?.webContents))
   mainWindow.on('enter-full-screen', () => scheduleAutoZoom(mainWindow?.webContents))
   mainWindow.on('leave-full-screen', () => scheduleAutoZoom(mainWindow?.webContents))
+  mainWindow.on('restore', () => scheduleAutoZoom(mainWindow?.webContents))
+  mainWindow.webContents.on('did-navigate-in-page', () =>
+    scheduleAutoZoom(mainWindow?.webContents),
+  )
   applyAutoZoom(mainWindow.webContents)
 
   mainWindow.on('close', event => {
@@ -988,6 +1031,12 @@ ipcMain.on('chat:send-result', (_event, payload) => {
 ipcMain.on('chat:popup-settings', () => {
   if (chatPopup && !chatPopup.isDestroyed()) chatPopup.hide()
   createSettingsWindow()
+})
+
+ipcMain.on('page:size-changed', event => {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (event.sender !== mainWindow.webContents) return
+  scheduleAutoZoom(mainWindow.webContents)
 })
 
 ipcMain.on('queue:state', (_event, state) => {
