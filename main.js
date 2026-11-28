@@ -101,6 +101,28 @@ async function applyVoiceCss(webContents) {
   }
 }
 
+// A thin draggable strip at the top of the window. The title bar is hidden, so
+// without an explicit drag region the window cannot be moved with the mouse.
+// It keeps the site background colour so it blends in and stays invisible.
+const insertedDragKeys = new WeakMap()
+
+async function applyDragStrip(webContents) {
+  if (!webContents || webContents.isDestroyed()) return
+  const bg = settings.faceitTheme ? '#0a0b0e' : '#1b1b1b'
+  const css = `#tf2pickup-drag { position: fixed; top: 0; left: 0; right: 0; height: 34px; z-index: 2147483646; -webkit-app-region: drag; background: ${bg}; }`
+  const previous = insertedDragKeys.get(webContents)
+  try {
+    if (previous) {
+      insertedDragKeys.delete(webContents)
+      await webContents.removeInsertedCSS(previous)
+    }
+    insertedDragKeys.set(webContents, await webContents.insertCSS(css))
+  } catch {
+    // A page can be replaced while the CSS is being applied; the next load
+    // re-applies it anyway.
+  }
+}
+
 async function applySiteTheme(webContents) {
   if (!webContents || webContents.isDestroyed()) return
 
@@ -588,6 +610,7 @@ function createMainWindow() {
   mainWindow.webContents.on('dom-ready', () => {
     applySiteTheme(mainWindow?.webContents)
     applyVoiceCss(mainWindow?.webContents)
+    applyDragStrip(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
     applyAutoZoom(mainWindow?.webContents)
   })
@@ -874,6 +897,7 @@ function applySettings(next) {
 
   if (Boolean(previousTheme) !== Boolean(settings.faceitTheme) && mainWindow && !mainWindow.isDestroyed()) {
     applySiteTheme(mainWindow.webContents)
+    applyDragStrip(mainWindow.webContents)
   }
 
   return { ...settings }

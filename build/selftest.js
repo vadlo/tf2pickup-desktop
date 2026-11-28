@@ -1169,6 +1169,26 @@ async function testChatPopupUi() {
   record('Окно чата в трее: есть кнопка настроек', settingsOpened === true)
 }
 
+async function testDragStrip() {
+  resetIntervals()
+  const html = '<!doctype html><html><body><div id="content">page</div></body></html>'
+  const { dom, location } = createPage(html, 'https://tf2-pick-up.ru/')
+  bindWindow(dom.window, location)
+  const ipc = makeIpc({ 'auto-requeue:config': requeueConfig })
+  loadPreload(ipc)
+  await sleep(100)
+
+  const strip = dom.window.document.getElementById('tf2pickup-drag')
+  record('Перетаскивание: полоса создана', !!strip)
+
+  if (strip) strip.remove()
+  await sleep(80)
+  record(
+    'Перетаскивание: полоса восстанавливается после удаления',
+    !!dom.window.document.getElementById('tf2pickup-drag'),
+  )
+}
+
 async function testVoicePanel() {
   resetIntervals()
   const html = '<!doctype html><html><body><div id="content">page</div></body></html>'
@@ -1399,6 +1419,9 @@ async function testVoiceAssets() {
     mainJs.includes("label: 'Голосовые каналы Discord'"),
   )
   record('Голос: main всегда инжектит voice.css (applyVoiceCss)', mainJs.includes('function applyVoiceCss') && mainJs.includes('applyVoiceCss(mainWindow?.webContents)'))
+  record('Голос: main инжектит полосу перетаскивания (applyDragStrip)', mainJs.includes('function applyDragStrip') && mainJs.includes('applyDragStrip(mainWindow?.webContents)'))
+  record('Голос: preload содержит setupDragStrip', preloadJs.includes('function setupDragStrip()'))
+  record('Голос: preload вызывает setupDragStrip', preloadJs.includes('setupDragStrip()'))
   record('Голос: preload содержит setupVoicePanel', preloadJs.includes('function setupVoicePanel()'))
   record('Голос: preload вызывает setupVoicePanel', preloadJs.includes('setupVoicePanel()'))
   record('Голос: voice.css сбалансирован', (voiceCss.match(/\{/g) || []).length === (voiceCss.match(/\}/g) || []).length)
@@ -1480,6 +1503,7 @@ async function main() {
   await testChatSend()
   await testChatSendUnavailable()
   await testChatPopupUi()
+  await testDragStrip()
   await testVoicePanel()
   await testThemeAssets()
   await testVoiceAssets()

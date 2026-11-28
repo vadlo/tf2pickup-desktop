@@ -990,6 +990,32 @@ function setupQueueStateBridge() {
   schedule()
 }
 
+function setupDragStrip() {
+  const ensure = () => {
+    if (!document.body) return
+    if (document.getElementById('tf2pickup-drag')) return
+    const strip = document.createElement('div')
+    strip.id = 'tf2pickup-drag'
+    strip.setAttribute('aria-hidden', 'true')
+    document.body.appendChild(strip)
+  }
+
+  if (document.body) ensure()
+  else document.addEventListener('DOMContentLoaded', ensure, { once: true })
+
+  const readd = () => setTimeout(ensure, 0)
+  if (document.body) {
+    for (const eventName of ['htmx:afterSwap', 'htmx:afterSettle', 'htmx:historyRestore']) {
+      document.body.addEventListener(eventName, readd)
+    }
+    const observer = new MutationObserver(() => {
+      if (!document.getElementById('tf2pickup-drag')) ensure()
+    })
+    observer.observe(document.body, { childList: true })
+    observer.observe(document.documentElement, { childList: true })
+  }
+}
+
 function setupVoicePanel() {
   const ensure = () => {
     if (!document.body) return
@@ -1076,6 +1102,7 @@ if (location.protocol !== 'file:') {
       setupAutoRequeue()
       setupChatBridge()
       setupQueueStateBridge()
+      setupDragStrip()
       setupVoicePanel()
       watchPageSize()
     })
