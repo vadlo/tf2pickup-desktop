@@ -171,6 +171,13 @@ function currentQueueSlug() {
   return slugOf(normalizedPath())
 }
 
+// Slug of the queue the player is actually in (may differ from the page being
+// viewed). The queue switcher marks that link with `data-joined`.
+function joinedQueueSlug() {
+  const link = document.querySelector('#queue-switcher a[data-joined]')
+  return link?.getAttribute('data-umami-event-queue') || ''
+}
+
 function hiddenInputValue(id) {
   const element = document.getElementById(id)
   if (!element) return ''
@@ -184,6 +191,20 @@ function isInAnyQueue() {
 
 function isInCurrentQueue() {
   return hiddenInputValue('isInCurrentQueue') === 'true'
+}
+
+function ownQueueSlot(gameClass, slot) {
+  if (!gameClass || slot === undefined || slot === null) return null
+  return document.getElementById(`queue-slot-${gameClass}-${slot}`)
+}
+
+// True only when the player occupies the exact configured class/slot. The
+// site marks the own slot with the `queue-slot-own` class and a leave button.
+function isOnConfiguredSlot(gameClass, slot) {
+  const element = ownQueueSlot(gameClass, slot)
+  if (!element) return false
+  if (element.classList.contains('queue-slot-own')) return true
+  return Boolean(element.querySelector('.leave-queue-button'))
 }
 
 function isGameActive() {
@@ -484,12 +505,37 @@ function setupAutoRequeue() {
   let startupChecked = false
   let retryTimer = null
   let resolving = false
+  let leaveInFlight = false
+  let lastLeaveAttempt = 0
 
   const stopRetry = () => {
     if (retryTimer) {
       clearInterval(retryTimer)
       retryTimer = null
     }
+  }
+
+  // Leave whatever queue/slot currently holds the player so the pending join
+  // can put them on the configured one. Throttled so a slow htmx swap cannot
+  // turn the retry loop into a click storm. Returns true when the leave was
+  // issued or is still cooling down, false when there is no button to press.
+  const leaveCurrentQueue = () => {
+    if (leaveInFlight || Date.now() - lastLeaveAttempt < 2000) return true
+    const button =
+      document.querySelector('.queue-slot-own .leave-queue-button') ||
+      document.querySelector('.leave-queue-button')
+    if (!button || button.disabled) return false
+    leaveInFlight = true
+    lastLeaveAttempt = Date.now()
+    try {
+      button.click()
+    } catch {
+      // Ignore: the slot may be swapped out mid-click.
+    }
+    setTimeout(() => {
+      leaveInFlight = false
+    }, 1200)
+    return true
   }
 
   const tryJoin = () => {
@@ -516,17 +562,46 @@ function setupAutoRequeue() {
     }
 
     const slug = pending.slug || slugOf(pending.path) || QUEUE_SLUGS[pending.queue] || pending.queue
-    if (!isOnQueueSlug(slug)) {
-      stopRetry()
-      return
-    }
 
-    // #isInAnyQueue also covers the case when the site put the player into
-    // another queue while the pending join was in flight.
-    if (isInAnyQueue()) {
+    // Already exactly on the configured class/slot: the pending join is done.
+    // The queue page must match too: slot ids are only unique inside a queue.
+    if (isOnQueueSlug(slug) && isOnConfiguredSlot(pending.gameClass, pending.slot)) {
       clearStored(REQUEUE_PENDING_KEY)
       stopRetry()
       notified = false
+      startupChecked = true
+      return
+    }
+
+    // The player is queued on another mode or another slot: leave it first,
+    // then keep retrying so the join below fires right after the leave.
+    if (isInAnyQueue()) {
+      // If a join we just triggered landed, we are already in the queue —
+      // possibly on a fallback slot when the configured one was taken. Leaving
+      // now would only loop, so treat it as success.
+      if (joinInFlight || Date.now() - lastJoinAttempt < 5000) {
+        clearStored(REQUEUE_PENDING_KEY)
+        stopRetry()
+        notified = false
+        startupChecked = true
+        return
+      }
+
+      if (!retryTimer) retryTimer = setInterval(tryJoin, 400)
+      if (leaveCurrentQueue()) return
+
+      // No leave button on this page: the player sits in a queue of another
+      // mode. The queue switcher marks that queue with `data-joined`, so go
+      // there, leave it, and the retry loop will bring us back to join.
+      const joinedSlug = joinedQueueSlug()
+      if (joinedSlug && !isOnQueueSlug(joinedSlug)) {
+        location.assign(`/q/${joinedSlug}`)
+      }
+      return
+    }
+
+    if (!isOnQueueSlug(slug)) {
+      location.assign(pending.path || `/q/${slug}`)
       return
     }
 
@@ -551,17 +626,21 @@ function setupAutoRequeue() {
       notified = true
       ipcRenderer.send(
         'auto-action-done',
-        `Автозаход: занимаю слот ${slotId} в ${pending.queue} после окончания лобби`,
+        `Автозаход: занимаю слот ${slotId} в ${pending.queue}`,
       )
     }
 
     setTimeout(() => {
       const slot = slotId ? document.getElementById(`queue-slot-${slotId}`) : null
-      const joined = isInAnyQueue() || Boolean(slot?.hasAttribute('data-player'))
+      const joined =
+        isInAnyQueue() ||
+        isOnConfiguredSlot(pending.gameClass, pending.slot) ||
+        Boolean(slot?.hasAttribute('data-player'))
       if (joined) {
         clearStored(REQUEUE_PENDING_KEY)
         stopRetry()
         notified = false
+        startupChecked = true
       }
       joinInFlight = false
     }, 700)
@@ -672,11 +751,14 @@ function setupAutoRequeue() {
     if (!hasQueueUi()) return
     if (readStored(REQUEUE_PENDING_KEY)) return
 
-    if (isInAnyQueue()) {
-      startupChecked = true
-      return
-    }
-    if (isInCurrentQueue()) {
+    // Only the exact configured class/slot is respected. Any other state —
+    // another queue, another mode, or another slot of the same queue — is
+    // overridden and the player is moved to the configured slot.
+    const configuredSlug = QUEUE_SLUGS[requeueConfig.queue] || requeueConfig.queue
+    if (
+      isOnQueueSlug(configuredSlug) &&
+      isOnConfiguredSlot(requeueConfig.gameClass, requeueConfig.slot)
+    ) {
       startupChecked = true
       return
     }

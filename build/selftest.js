@@ -123,7 +123,7 @@ function trackJoinClicks(window) {
   return clicks
 }
 
-function switcher(currentSlug) {
+function switcher(currentSlug, joinedSlug = '') {
   const queues = [
     ['auto-6v6', '6v6'],
     ['auto-9v9', '9v9'],
@@ -137,7 +137,7 @@ function switcher(currentSlug) {
       ([slug, label]) =>
         `<a href="/q/${slug}" data-umami-event-queue="${slug}"${
           slug === currentSlug ? ' aria-current="page"' : ''
-        }><span class="queue-switcher-label"><span>${label}</span></span></a>`,
+        }${slug === joinedSlug ? ' data-joined=""' : ''}><span class="queue-switcher-label"><span>${label}</span></span></a>`,
     )
     .join('')}</nav>`
 }
@@ -156,6 +156,7 @@ function slotMarkup(id, state) {
 
 const queuePage = ({
   slug = 'auto-6v6',
+  joined = '',
   inQueue = false,
   inCurrent = false,
   preReady = false,
@@ -172,7 +173,7 @@ const queuePage = ({
       <div class="queue-toolbar" id="queue-toolbar">
         <input type="hidden" id="isInCurrentQueue" value="${inCurrent}" />
         <input type="hidden" id="isInAnyQueue" value="${inQueue}" />
-        ${switcher(slug)}
+        ${switcher(slug, joined)}
         <span id="queue-current-player-count">5</span>/<span id="queue-required-player-count">12</span>
         <button id="pre-ready-up-button" name="prereadytoggle" aria-pressed="${preReady}"${
           (preReadyDisabled ?? !inQueue) ? ' disabled' : ''
@@ -300,6 +301,145 @@ async function testStartupSkipWhenQueued() {
     'Запуск: уже в очереди — слот не занимается',
     clicks.length === 0 && readPending(dom.window) === null && assigned.length === 0,
     `clicks=${JSON.stringify(clicks)} assigned=${JSON.stringify(assigned)}`,
+  )
+}
+
+function trackLeaveClicks(window) {
+  const clicks = []
+  for (const button of window.document.querySelectorAll('.leave-queue-button')) {
+    button.addEventListener('click', () =>
+      clicks.push(button.closest('.queue-slot')?.id || 'unknown'),
+    )
+  }
+  return clicks
+}
+
+async function testStartupOverridesOtherSlot() {
+  resetIntervals()
+  const html = queuePage({
+    inQueue: true,
+    inCurrent: true,
+    preReady: true,
+    slots: [
+      ['scout-1', 'own'],
+      ['soldier-1', 'free'],
+      ['soldier-2', 'occupied'],
+    ],
+  })
+  const { dom, location } = createPage(html, 'https://tf2-pick-up.ru/q/auto-6v6')
+  bindWindow(dom.window, location)
+  const clicks = trackJoinClicks(dom.window)
+  const leaveClicks = trackLeaveClicks(dom.window)
+  loadPreload(makeIpc({ 'auto-requeue:config': requeueConfig }))
+  await sleep(600)
+
+  record(
+    'Старт: чужой слот — сначала выход из очереди',
+    leaveClicks.length === 1 && clicks.length === 0,
+    `leave=${JSON.stringify(leaveClicks)} clicks=${JSON.stringify(clicks)}`,
+  )
+
+  // The server confirmed the leave: the hidden flags flipped and the old slot
+  // turned back into a free join button.
+  dom.window.document.getElementById('isInAnyQueue').setAttribute('value', 'false')
+  dom.window.document.getElementById('isInCurrentQueue').setAttribute('value', 'false')
+  const own = dom.window.document.getElementById('queue-slot-scout-1')
+  own.setAttribute('class', 'queue-slot')
+  own.removeAttribute('data-player')
+  own.innerHTML = '<div class="player-info">free</div>'
+  await sleep(1200)
+
+  record(
+    'Старт: чужой слот — затем занят настроенный слот',
+    clicks.length === 1 && clicks[0] === 'soldier-1',
+    `clicks=${JSON.stringify(clicks)}`,
+  )
+
+  dom.window.document.getElementById('isInAnyQueue').setAttribute('value', 'true')
+  const target = dom.window.document.getElementById('queue-slot-soldier-1')
+  target.setAttribute('class', 'queue-slot queue-slot-own')
+  target.setAttribute('data-player', '76561198000000000')
+  target.innerHTML = '<div class="player-info">me</div>'
+  await sleep(900)
+
+  record(
+    'Старт: чужой слот — флаг автозахода очищен',
+    readPending(dom.window) === null,
+    JSON.stringify(readPending(dom.window)),
+  )
+}
+
+async function testStartupLeavesOtherMode() {
+  resetIntervals()
+  const html = queuePage({
+    slug: 'auto-6v6',
+    joined: 'auto-9v9',
+    inQueue: true,
+    inCurrent: false,
+    slots: [
+      ['soldier-1', 'free'],
+      ['soldier-2', 'occupied'],
+      ['soldier-3', 'free'],
+    ],
+  })
+  const { dom, assigned, location } = createPage(html, 'https://tf2-pick-up.ru/q/auto-6v6')
+  bindWindow(dom.window, location)
+  const clicks = trackJoinClicks(dom.window)
+  loadPreload(makeIpc({ 'auto-requeue:config': requeueConfig }))
+  await sleep(700)
+
+  record(
+    'Старт: другой режим — переход в очередь, где стоит игрок',
+    assigned[0] === '/q/auto-9v9' && clicks.length === 0,
+    `assigned=${JSON.stringify(assigned)} clicks=${JSON.stringify(clicks)}`,
+  )
+}
+
+async function testRequeueLeavesJoinedQueueAndReturns() {
+  resetIntervals()
+  const html = queuePage({
+    slug: 'auto-9v9',
+    joined: 'auto-9v9',
+    inQueue: true,
+    inCurrent: true,
+    slots: [
+      ['soldier-1', 'own'],
+      ['soldier-2', 'free'],
+      ['soldier-3', 'occupied'],
+    ],
+  })
+  const { dom, assigned, location } = createPage(html, 'https://tf2-pick-up.ru/q/auto-9v9')
+  bindWindow(dom.window, location)
+  setPending(dom.window, { slug: 'auto-6v6', path: '/q/auto-6v6' })
+  const clicks = trackJoinClicks(dom.window)
+  const leaveClicks = trackLeaveClicks(dom.window)
+  loadPreload(makeIpc({ 'auto-requeue:config': requeueConfig }))
+  await sleep(600)
+
+  record(
+    'Другая очередь: сначала выход, без захода на чужой слот',
+    leaveClicks.length === 1 && clicks.length === 0 && assigned.length === 0,
+    `leave=${JSON.stringify(leaveClicks)} clicks=${JSON.stringify(clicks)} assigned=${JSON.stringify(assigned)}`,
+  )
+
+  dom.window.document.getElementById('isInAnyQueue').setAttribute('value', 'false')
+  dom.window.document.getElementById('isInCurrentQueue').setAttribute('value', 'false')
+  dom.window.document.querySelector('#queue-switcher a[data-joined]').removeAttribute('data-joined')
+  const own = dom.window.document.getElementById('queue-slot-soldier-1')
+  own.setAttribute('class', 'queue-slot')
+  own.removeAttribute('data-player')
+  own.innerHTML = '<div class="player-info">free</div>'
+  await sleep(1200)
+
+  record(
+    'Другая очередь: после выхода — переход к настроенной очереди',
+    assigned.includes('/q/auto-6v6'),
+    `assigned=${JSON.stringify(assigned)}`,
+  )
+  record(
+    'Другая очередь: флаг автозахода сохранён до захода',
+    readPending(dom.window) !== null,
+    JSON.stringify(readPending(dom.window)),
   )
 }
 
@@ -1115,6 +1255,9 @@ async function testInstalledBuild() {
 async function main() {
   await testStartupJoin()
   await testStartupSkipWhenQueued()
+  await testStartupOverridesOtherSlot()
+  await testStartupLeavesOtherMode()
+  await testRequeueLeavesJoinedQueueAndReturns()
   await testStartupSkipsOtherPages()
   await testGameEndRequeue()
   await testUltitrioResolution()
