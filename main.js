@@ -109,7 +109,7 @@ const insertedDragKeys = new WeakMap()
 async function applyDragStrip(webContents) {
   if (!webContents || webContents.isDestroyed()) return
   const bg = settings.faceitTheme ? '#0a0b0e' : '#1b1b1b'
-  const css = `#tf2pickup-drag { position: fixed; top: 0; left: 0; right: 0; height: 34px; z-index: 2147483646; -webkit-app-region: drag; background: ${bg}; }`
+  const css = `#tf2pickup-drag { position: fixed; top: 0; left: 0; right: 0; height: 34px; z-index: 2147483646; -webkit-app-region: drag; background: ${bg}; } body { padding-top: 34px !important; }`
   const previous = insertedDragKeys.get(webContents)
   try {
     if (previous) {
