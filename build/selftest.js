@@ -1169,6 +1169,54 @@ async function testChatPopupUi() {
   record('Окно чата в трее: есть кнопка настроек', settingsOpened === true)
 }
 
+async function testVoicePanel() {
+  resetIntervals()
+  const html = '<!doctype html><html><body><div id="content">page</div></body></html>'
+  const { dom, location } = createPage(html, 'https://tf2-pick-up.ru/')
+  const fetchCalls = bindWindow(dom.window, location)
+  const ipc = makeIpc({ 'auto-requeue:config': requeueConfig })
+  loadPreload(ipc)
+  await sleep(100)
+
+  const panel = dom.window.document.getElementById('tf2pickup-voice')
+  record('Голос: панель создана', !!panel)
+  const buttons = panel ? Array.from(panel.querySelectorAll('[data-voice-team]')) : []
+  record('Голос: две кнопки RED/BLU', buttons.length === 2, `count=${buttons.length}`)
+  const teams = buttons.map(button => button.getAttribute('data-voice-team'))
+  record(
+    'Голос: кнопки red и blue',
+    teams.includes('red') && teams.includes('blue'),
+    JSON.stringify(teams),
+  )
+
+  const redButton = panel?.querySelector('[data-voice-team="red"]')
+  redButton?.click()
+  await sleep(50)
+  const redSent = ipc.all('voice:open')
+  record(
+    'Голос: клик RED отправляет voice:open red',
+    redSent.length === 1 && redSent[0].args[0] === 'red',
+    JSON.stringify(redSent),
+  )
+
+  const blueButton = panel?.querySelector('[data-voice-team="blue"]')
+  blueButton?.click()
+  await sleep(50)
+  const blueSent = ipc.all('voice:open')
+  record(
+    'Голос: клик BLU отправляет voice:open blue',
+    blueSent.length === 2 && blueSent[1].args[0] === 'blue',
+    JSON.stringify(blueSent),
+  )
+
+  if (panel) panel.remove()
+  await sleep(80)
+  record(
+    'Голос: панель восстанавливается после удаления',
+    !!dom.window.document.getElementById('tf2pickup-voice'),
+  )
+}
+
 async function testThemeAssets() {
   const readTheme = name => fs.readFileSync(path.join(ROOT, 'theme', name), 'utf8')
   const fonts = readTheme('fonts.css')
@@ -1329,6 +1377,34 @@ async function testSettingsUi() {
   )
 }
 
+async function testVoiceAssets() {
+  const mainJs = fs.readFileSync(path.join(ROOT, 'main.js'), 'utf8')
+  const preloadJs = fs.readFileSync(PRELOAD, 'utf8')
+  const voiceCss = fs.readFileSync(path.join(ROOT, 'theme', 'voice.css'), 'utf8')
+
+  record(
+    'Голос: main содержит VOICE_INVITES с кодами приглашений',
+    mainJs.includes("red: { label: 'Красные (RED)', code: 'dvQVsNUsM' }") &&
+      mainJs.includes("blue: { label: 'Синие (BLU)', code: 'EFc7mjTnq' }"),
+  )
+  record('Голос: main содержит openVoiceInvite', mainJs.includes('async function openVoiceInvite(team)'))
+  record('Голос: main использует discord deep link', mainJs.includes('discord://-/invite/${invite.code}'))
+  record(
+    'Голос: main проверяет наличие Discord через getApplicationNameForProtocol',
+    mainJs.includes("app.getApplicationNameForProtocol('discord://')"),
+  )
+  record("Голос: main регистрирует ipcMain.on('voice:open')", mainJs.includes("ipcMain.on('voice:open'"))
+  record(
+    'Голос: трей содержит submenu «Голосовые каналы Discord»',
+    mainJs.includes("label: 'Голосовые каналы Discord'"),
+  )
+  record('Голос: main всегда инжектит voice.css (applyVoiceCss)', mainJs.includes('function applyVoiceCss') && mainJs.includes('applyVoiceCss(mainWindow?.webContents)'))
+  record('Голос: preload содержит setupVoicePanel', preloadJs.includes('function setupVoicePanel()'))
+  record('Голос: preload вызывает setupVoicePanel', preloadJs.includes('setupVoicePanel()'))
+  record('Голос: voice.css сбалансирован', (voiceCss.match(/\{/g) || []).length === (voiceCss.match(/\}/g) || []).length)
+  record('Голос: voice.css содержит #tf2pickup-voice', voiceCss.includes('#tf2pickup-voice'))
+}
+
 async function testQueueUrlCache() {
   resetIntervals()
   const { dom, assigned, location } = createPage(gamePage({ number: 9 }), 'https://tf2-pick-up.ru/games/9')
@@ -1404,7 +1480,9 @@ async function main() {
   await testChatSend()
   await testChatSendUnavailable()
   await testChatPopupUi()
+  await testVoicePanel()
   await testThemeAssets()
+  await testVoiceAssets()
   await testSettingsUi()
   await testQueueUrlCache()
   await testInstalledBuild()

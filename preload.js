@@ -990,6 +990,75 @@ function setupQueueStateBridge() {
   schedule()
 }
 
+function setupVoicePanel() {
+  const ensure = () => {
+    if (!document.body) return
+    if (document.getElementById('tf2pickup-voice')) return
+    const panel = document.createElement('div')
+    panel.id = 'tf2pickup-voice'
+    panel.setAttribute('role', 'group')
+    panel.setAttribute('aria-label', 'Голосовые каналы Discord')
+
+    const caption = document.createElement('div')
+    caption.className = 'tf2pickup-voice-caption'
+    caption.textContent = 'Голос Discord'
+    panel.appendChild(caption)
+
+    const teams = [
+      { team: 'red', label: 'RED', sub: 'Красные' },
+      { team: 'blue', label: 'BLU', sub: 'Синие' },
+    ]
+    for (const item of teams) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = `tf2pickup-voice-button tf2pickup-voice-${item.team}`
+      button.dataset.voiceTeam = item.team
+      button.title = `Войти в голосовой канал ${item.sub.toLowerCase()} (Discord)`
+
+      const dot = document.createElement('span')
+      dot.className = 'tf2pickup-voice-dot'
+      button.appendChild(dot)
+
+      const label = document.createElement('span')
+      label.className = 'tf2pickup-voice-label'
+      label.textContent = item.label
+      const small = document.createElement('small')
+      small.textContent = item.sub
+      label.appendChild(small)
+      button.appendChild(label)
+
+      button.addEventListener('click', event => {
+        event.preventDefault()
+        event.stopPropagation()
+        ipcRenderer.send('voice:open', item.team)
+      })
+      button.addEventListener('mousedown', event => {
+        event.preventDefault()
+        event.stopPropagation()
+      })
+
+      panel.appendChild(button)
+    }
+
+    document.body.appendChild(panel)
+  }
+
+  if (document.body) ensure()
+  else document.addEventListener('DOMContentLoaded', ensure, { once: true })
+
+  const readd = () => setTimeout(ensure, 0)
+  if (document.body) {
+    for (const eventName of ['htmx:afterSwap', 'htmx:afterSettle', 'htmx:historyRestore']) {
+      document.body.addEventListener(eventName, readd)
+    }
+    const observer = new MutationObserver(() => {
+      if (!document.getElementById('tf2pickup-voice')) ensure()
+    })
+    observer.observe(document.body, { childList: true })
+    observer.observe(document.documentElement, { childList: true })
+  }
+}
+
 function whenReady(callback) {
   if (document.documentElement) {
     callback()
@@ -1007,6 +1076,7 @@ if (location.protocol !== 'file:') {
       setupAutoRequeue()
       setupChatBridge()
       setupQueueStateBridge()
+      setupVoicePanel()
       watchPageSize()
     })
   } catch (error) {

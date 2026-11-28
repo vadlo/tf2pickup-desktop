@@ -51,9 +51,16 @@ let chatSendSeq = 0
 const chatSendPending = new Map()
 
 let siteThemeCss = ''
+let voiceCss = ''
 const insertedThemeKeys = new WeakMap()
 
 const themeFile = name => path.join(__dirname, 'theme', name)
+
+// Discord invites of the tf2pick-up.ru community server.
+const VOICE_INVITES = {
+  red: { label: 'Красные (RED)', code: 'dvQVsNUsM' },
+  blue: { label: 'Синие (BLU)', code: 'EFc7mjTnq' },
+}
 
 function loadSiteThemeCss() {
   if (siteThemeCss) return siteThemeCss
@@ -67,6 +74,31 @@ function loadSiteThemeCss() {
     siteThemeCss = ''
   }
   return siteThemeCss
+}
+
+// The voice panel styles are independent of the FACEIT theme: the panel must
+// look the same with the theme off, so this CSS is always injected.
+function loadVoiceCss() {
+  if (voiceCss) return voiceCss
+  try {
+    voiceCss = fs.readFileSync(themeFile('voice.css'), 'utf8')
+  } catch (error) {
+    console.error('Не удалось загрузить стили голосовых каналов:', error)
+    voiceCss = ''
+  }
+  return voiceCss
+}
+
+async function applyVoiceCss(webContents) {
+  if (!webContents || webContents.isDestroyed()) return
+  const css = loadVoiceCss()
+  if (!css) return
+  try {
+    await webContents.insertCSS(css)
+  } catch {
+    // A page can be replaced while the CSS is being applied; the next load
+    // re-applies it anyway.
+  }
 }
 
 async function applySiteTheme(webContents) {
@@ -292,6 +324,38 @@ async function requestConnect(connectUrl, skipConfirmation = false) {
     if (settings.minimizeOnJoin) mainWindow?.minimize()
   } catch (error) {
     dialog.showErrorBox('Не удалось запустить TF2', String(error?.message ?? error))
+  }
+}
+
+// Opens the community Discord voice channel in the Discord app when it is
+// installed, otherwise falls back to the browser invite page.
+async function openVoiceInvite(team) {
+  const invite = VOICE_INVITES[team]
+  if (!invite) return
+
+  const webUrl = `https://discord.gg/${invite.code}`
+  let hasDiscordApp = false
+  try {
+    hasDiscordApp = Boolean(app.getApplicationNameForProtocol('discord://'))
+  } catch {
+    hasDiscordApp = false
+  }
+
+  const target = hasDiscordApp ? `discord://-/invite/${invite.code}` : webUrl
+  try {
+    await shell.openExternal(target)
+    notify('Discord', `Открываем голосовой канал: ${invite.label}`)
+  } catch (error) {
+    if (target !== webUrl) {
+      try {
+        await shell.openExternal(webUrl)
+        notify('Discord', `Открываем голосовой канал: ${invite.label}`)
+        return
+      } catch {
+        // Fall through to the error box.
+      }
+    }
+    dialog.showErrorBox('Не удалось открыть Discord', String(error?.message ?? error))
   }
 }
 
@@ -523,6 +587,7 @@ function createMainWindow() {
   attachZoom(mainWindow.webContents)
   mainWindow.webContents.on('dom-ready', () => {
     applySiteTheme(mainWindow?.webContents)
+    applyVoiceCss(mainWindow?.webContents)
     applyWidthZoom(mainWindow?.webContents)
     applyAutoZoom(mainWindow?.webContents)
   })
@@ -942,6 +1007,16 @@ function chatMenuItems() {
   return [...items, { type: 'separator' }]
 }
 
+function voiceMenu() {
+  return {
+    label: 'Голосовые каналы Discord',
+    submenu: [
+      { label: 'Красные (RED)', click: () => openVoiceInvite('red') },
+      { label: 'Синие (BLU)', click: () => openVoiceInvite('blue') },
+    ],
+  }
+}
+
 function trayTemplate() {
   return [
     {
@@ -951,6 +1026,7 @@ function trayTemplate() {
     { type: 'separator' },
     ...chatMenuItems(),
     queueMenu(),
+    voiceMenu(),
     { type: 'separator' },
     {
       label: 'Настройки',
@@ -1030,6 +1106,10 @@ ipcMain.on('notify-server-ready', () => {
 
 ipcMain.on('steam-connect', (_event, url) => {
   if (typeof url === 'string') requestConnect(url)
+})
+
+ipcMain.on('voice:open', (_event, team) => {
+  if (typeof team === 'string') openVoiceInvite(team)
 })
 
 ipcMain.on('auto-connect', (_event, url) => {
