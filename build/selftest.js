@@ -443,6 +443,132 @@ async function testRequeueLeavesJoinedQueueAndReturns() {
   )
 }
 
+async function testConfigChangeMovesImmediately() {
+  resetIntervals()
+  const html = queuePage({
+    inQueue: true,
+    inCurrent: true,
+    slots: [
+      ['soldier-1', 'own'],
+      ['soldier-2', 'free'],
+      ['soldier-3', 'free'],
+    ],
+  })
+  const { dom, location } = createPage(html, 'https://tf2-pick-up.ru/q/auto-6v6')
+  bindWindow(dom.window, location)
+  const clicks = trackJoinClicks(dom.window)
+  const leaveClicks = trackLeaveClicks(dom.window)
+  const ipc = makeIpc({ 'auto-requeue:config': requeueConfig })
+  loadPreload(ipc)
+  await sleep(600)
+
+  record(
+    'Смена настройки: уже на нужном слоте — без действий',
+    clicks.length === 0 && leaveClicks.length === 0,
+    `clicks=${JSON.stringify(clicks)} leave=${JSON.stringify(leaveClicks)}`,
+  )
+
+  // Unrelated settings must not move the player.
+  ipc.emit('settings:changed', {
+    autoRequeue: true,
+    requeueQueue: '6v6',
+    requeueClass: 'soldier',
+    requeueSlot: 1,
+    trayChat: false,
+  })
+  await sleep(500)
+
+  record(
+    'Смена настройки: чужие настройки не трогают слот',
+    clicks.length === 0 && leaveClicks.length === 0,
+    `clicks=${JSON.stringify(clicks)} leave=${JSON.stringify(leaveClicks)}`,
+  )
+
+  ipc.emit('settings:changed', {
+    autoRequeue: true,
+    requeueQueue: '6v6',
+    requeueClass: 'soldier',
+    requeueSlot: 3,
+  })
+  await sleep(600)
+
+  record(
+    'Смена настройки: сразу выходит со старого слота',
+    leaveClicks.length === 1 && clicks.length === 0,
+    `leave=${JSON.stringify(leaveClicks)} clicks=${JSON.stringify(clicks)}`,
+  )
+
+  dom.window.document.getElementById('isInAnyQueue').setAttribute('value', 'false')
+  dom.window.document.getElementById('isInCurrentQueue').setAttribute('value', 'false')
+  const own = dom.window.document.getElementById('queue-slot-soldier-1')
+  own.setAttribute('class', 'queue-slot')
+  own.removeAttribute('data-player')
+  own.innerHTML = '<div class="player-info">free</div>'
+  await sleep(1200)
+
+  record(
+    'Смена настройки: сразу занимает новый слот',
+    clicks.length === 1 && clicks[0] === 'soldier-3',
+    `clicks=${JSON.stringify(clicks)}`,
+  )
+}
+
+async function testConfigEnableMovesImmediately() {
+  resetIntervals()
+  const html = queuePage({
+    inQueue: true,
+    inCurrent: true,
+    slots: [
+      ['soldier-1', 'own'],
+      ['soldier-2', 'free'],
+      ['soldier-3', 'free'],
+    ],
+  })
+  const { dom, location } = createPage(html, 'https://tf2-pick-up.ru/q/auto-6v6')
+  bindWindow(dom.window, location)
+  const clicks = trackJoinClicks(dom.window)
+  const leaveClicks = trackLeaveClicks(dom.window)
+  const ipc = makeIpc({
+    'auto-requeue:config': { ...requeueConfig, enabled: false },
+  })
+  loadPreload(ipc)
+  await sleep(600)
+
+  record(
+    'Автозаход выключен: слот не трогается',
+    clicks.length === 0 && leaveClicks.length === 0,
+    `clicks=${JSON.stringify(clicks)} leave=${JSON.stringify(leaveClicks)}`,
+  )
+
+  ipc.emit('settings:changed', {
+    autoRequeue: true,
+    requeueQueue: '6v6',
+    requeueClass: 'soldier',
+    requeueSlot: 2,
+  })
+  await sleep(600)
+
+  record(
+    'Включение в трее: сразу выходит со старого слота',
+    leaveClicks.length === 1 && clicks.length === 0,
+    `leave=${JSON.stringify(leaveClicks)} clicks=${JSON.stringify(clicks)}`,
+  )
+
+  dom.window.document.getElementById('isInAnyQueue').setAttribute('value', 'false')
+  dom.window.document.getElementById('isInCurrentQueue').setAttribute('value', 'false')
+  const own = dom.window.document.getElementById('queue-slot-soldier-1')
+  own.setAttribute('class', 'queue-slot')
+  own.removeAttribute('data-player')
+  own.innerHTML = '<div class="player-info">free</div>'
+  await sleep(1200)
+
+  record(
+    'Включение в трее: сразу занимает выбранный слот',
+    clicks.length === 1 && clicks[0] === 'soldier-2',
+    `clicks=${JSON.stringify(clicks)}`,
+  )
+}
+
 async function testStartupSkipsOtherPages() {
   resetIntervals()
   const html = `<!doctype html><html><body>
@@ -1258,6 +1384,8 @@ async function main() {
   await testStartupOverridesOtherSlot()
   await testStartupLeavesOtherMode()
   await testRequeueLeavesJoinedQueueAndReturns()
+  await testConfigChangeMovesImmediately()
+  await testConfigEnableMovesImmediately()
   await testStartupSkipsOtherPages()
   await testGameEndRequeue()
   await testUltitrioResolution()

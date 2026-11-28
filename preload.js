@@ -22,28 +22,45 @@ const QUEUE_SLUGS = {
 
 let requeueConfig = { enabled: false, queue: '6v6', gameClass: 'soldier', slot: 1 }
 let requeueConfigLoaded = false
+let requeueConfigChanged = false
 let requeueWake = null
 
+// Returns true when an already loaded config actually changed, so the page can
+// immediately move the player to the newly selected slot.
 function applyRequeueConfig(value) {
-  if (!value) return
-  requeueConfigLoaded = true
-  requeueConfig = {
+  if (!value) return false
+  const next = {
     enabled: Boolean(value.enabled),
     queue: typeof value.queue === 'string' && value.queue ? value.queue : '6v6',
     gameClass:
       typeof value.gameClass === 'string' && value.gameClass ? value.gameClass : 'soldier',
     slot: Number(value.slot) || 1,
   }
+  const changed =
+    requeueConfigLoaded &&
+    (next.enabled !== requeueConfig.enabled ||
+      next.queue !== requeueConfig.queue ||
+      next.gameClass !== requeueConfig.gameClass ||
+      next.slot !== requeueConfig.slot)
+  requeueConfigLoaded = true
+  requeueConfig = next
+  return changed
 }
 
 ipcRenderer.on('settings:changed', (_event, values) => {
   if (!values) return
-  applyRequeueConfig({
+  const changed = applyRequeueConfig({
     enabled: values.autoRequeue,
     queue: values.requeueQueue,
     gameClass: values.requeueClass,
     slot: values.requeueSlot,
   })
+  if (changed) {
+    // A new target must override a join that was already in flight for the
+    // previous target and must be applied without restarting the app.
+    requeueConfigChanged = true
+    clearStored(REQUEUE_PENDING_KEY)
+  }
   if (requeueWake) requeueWake()
 })
 
@@ -507,6 +524,7 @@ function setupAutoRequeue() {
   let resolving = false
   let leaveInFlight = false
   let lastLeaveAttempt = 0
+  let requeueEpoch = 0
 
   const stopRetry = () => {
     if (retryTimer) {
@@ -545,6 +563,7 @@ function setupAutoRequeue() {
       notified = false
       return
     }
+    const epoch = requeueEpoch
     // Never drop a pending join because the settings round-trip is still in
     // flight: the config loads asynchronously right after the page starts.
     if (!requeueConfigLoaded) return
@@ -631,6 +650,7 @@ function setupAutoRequeue() {
     }
 
     setTimeout(() => {
+      if (epoch !== requeueEpoch) return
       const slot = slotId ? document.getElementById(`queue-slot-${slotId}`) : null
       const joined =
         isInAnyQueue() ||
@@ -688,6 +708,16 @@ function setupAutoRequeue() {
 
   const check = () => {
     scheduled = false
+
+    // A changed auto-requeue target (tray menu or settings window) must be
+    // applied immediately, not only after restarting the app.
+    if (requeueConfigChanged) {
+      requeueConfigChanged = false
+      startupChecked = false
+      requeueEpoch += 1
+      lastJoinAttempt = 0
+      joinInFlight = false
+    }
 
     if (readStored(REQUEUE_PENDING_KEY)) tryJoin()
 
