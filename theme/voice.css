@@ -9,7 +9,7 @@
   z-index: 2147483000;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   font-family: var(--face-font, 'Roboto Condensed', 'Segoe UI', system-ui, sans-serif);
   user-select: none;
 }
@@ -17,7 +17,7 @@
 #tf2pickup-voice .tf2pickup-voice-caption {
   padding-left: 2px;
   color: #8b92a0;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.18em;
   line-height: 1;
@@ -27,15 +27,15 @@
 .tf2pickup-voice-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-width: 112px;
-  padding: 7px 10px;
+  gap: 9px;
+  min-width: 123px;
+  padding: 8px 11px;
   border: 1px solid #272b34;
   border-left: 3px solid #272b34;
   border-radius: 2px;
   background: rgb(17 19 24 / 94%);
   color: #e8ebf0;
-  font: 600 11px/1 var(--face-font, 'Roboto Condensed', 'Segoe UI', system-ui, sans-serif);
+  font: 600 12px/1 var(--face-font, 'Roboto Condensed', 'Segoe UI', system-ui, sans-serif);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
@@ -61,6 +61,23 @@
   opacity: 0.85;
 }
 
+.tf2pickup-voice-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+  flex: 0 0 auto;
+}
+
+.tf2pickup-voice-red .tf2pickup-voice-dot {
+  color: #ff3b30;
+}
+
+.tf2pickup-voice-blue .tf2pickup-voice-dot {
+  color: #3b82f6;
+}
+
 .tf2pickup-voice-label {
   display: flex;
   flex-direction: column;
@@ -71,12 +88,12 @@
 
 .tf2pickup-voice-label small {
   color: #8b92a0;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.14em;
 }
 
-.tf2pickup-voice-dot {\n  width: 8px;\n  height: 8px;\n  border-radius: 50%;\n  background: currentColor;\n  box-shadow: 0 0 6px currentColor;\n  flex: 0 0 auto;\n}\n\n.tf2pickup-voice-red .tf2pickup-voice-dot {\n  color: #ff3b30;\n}\n\n.tf2pickup-voice-blue .tf2pickup-voice-dot {\n  color: #3b82f6;\n}\n\n.tf2pickup-voice-red {
+.tf2pickup-voice-red {
   border-left-color: #ff3b30;
 }
 
